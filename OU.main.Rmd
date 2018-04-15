@@ -1,19 +1,22 @@
 ---
 title: "A Hierarchical extension to Ornstein-Uhlenbeck-type Student's t-processes"
-author: "Ville Laitinen & Leo Lahti | University of Turku | velait@utu.fi"
-date: "20 3 2018"
+author: |
+  | Ville Laitinen & Leo Lahti 
+  | University of Turku
+  | velait@utu.fi
+date: "15.4.2018"
 header-includes:
 
 output:
 pdf_document:
   latex_engine: xelatex
 word_document:
-  fig_caption: yes  
+  fig_caption: yes
 bookdown::html_document2:
   fig_caption: yes
 bookdown::word_document2:
   fig_caption: yes
-# bibliography: OU_StanCon.bib
+bibliography: OU_StanCon.bib
 ---
   
 ```{r setup, include=FALSE}
@@ -40,6 +43,9 @@ subblck <- captioner(prefix="Supplementary Chunk")
 
 set.seed(11235)
 source("OU.functions.R")
+
+#Load data if available. If not, set eval = TRUE in sampling chunk.
+load("OU_fit_list")
 ```
 
 ## Introduction
@@ -47,7 +53,7 @@ source("OU.functions.R")
 The aim of this work is to provide a hierarchical extension of the Ornstein-Uhlenbeck type processes, in order to aggregate information across multiple (short) time series. This extends the recent Stan implementation [@Goodman2018], where parameter estimates of a Student-t type OU process are obtained based on a single (long) time series. We have added a level of hierarchy, which allows inference of the model parameters based on multiple time series.
 We validate the implementation and investigate its robustness to variations in sample size and time series lengths  based on simulated data. 
 
-Motivation for this work comes from the analysis of human gut microbiome dynamics. It has been reported that on average the abundance of many gut bacteria remains relatively stable over long time periods [@david_host_2014]. On a shorter (daily) time scale these abundances do however have considerable fluctuations. A number of cross-sectional studies of the human microbiome have characterized the diversity and variation of the gut microbiome between individuals [e.g. @hmp_huttenhower, @Qin2009]. The temporal variation of different taxonomic units within individuals is, however, less well understood [@faust_metagenomics_2015]. One of the current challenges is that the currently available time series are often short, sparse and noisy, and robust inference of dynamical models can be challenging in such case. Some of these limitations can be addressed by adding a level of hierarchy to the model in order to aggregate information across multiple time series. In addition, such extensions can potentially help to analyze the individuality of the time series from different study subjects.
+Motivation for this work comes from the analysis of human gut microbiome dynamics. It has been reported that on average the abundance of many gut bacteria remains relatively stable over long time periods [@david_host_2014]. On a shorter (daily) time scale these abundances do however have considerable fluctuations. A number of cross-sectional studies of the human microbiome have characterized the diversity and variation of the gut microbiome between individuals [e.g. @hmp_huttenhower; @Qin2009]. The temporal variation of different taxonomic units within individuals is, however, less well understood [@faust_metagenomics_2015]. One of the current challenges is that the currently available time series are often short, sparse and noisy, and robust inference of dynamical models can be challenging in such case. Some of these limitations can be addressed by adding a level of hierarchy to the model in order to aggregate information across multiple time series. In addition, such extensions can potentially help to analyze the individuality of the time series from different study subjects.
 
 Moreover, given the complex and highly individual nature of the gut ecosystem, exact dynamical models of the underlying system are missing. The OU-type processes provide means to characterize key properties of system dynamics, such as the location and resilience of the potential wells, in a non-parametric manner, when knowledge on the data-generating mechanisms is missing.  Therefore, variants of the OU process appear to provide rigorous and justified methods for modeling these dynamics. However, apart from [@Goodman2018] we are not aware of applications of these models, in particular its hierarchical extensions that we develop here, in the context of human microbiome studies. The methodology itself is very generic, and its potential applications naturally reach beyond population dynamics.
 
@@ -84,14 +90,14 @@ We will use this expression in the Stan code model block to increment the log de
 
 
 #### Hierarchical extension
-The model outlined above essentially described the Ornstein-Uhlenbeck driven t-process as implemented in [@Goodman]. The novel contribution to this work that  we present now is in equipping the model with hierarchical structure and testing the robustness of the extended implementation. Let $\mathcal{X} = \{\bar{X_j}, j \in \{1, \ldots, N\}\}$ be a set of latent values, with $n_j$ observations in each, each $j$ respresenting e.g. a different measurement site. We assume a hierarchical structure for the parameters $\lambda, \mu$ and $\kappa$,
+The model outlined above essentially described the Ornstein-Uhlenbeck driven t-process as implemented in [@Goodman2018]. The novel contribution to this work that  we present now is in equipping the model with hierarchical structure and testing the robustness of the extended implementation. Let $\mathcal{X} = \{\bar{X_j}, j \in \{1, \ldots, N\}\}$ be a set of latent values, with $n_j$ observations in each, each $j$ respresenting e.g. a different measurement site. We assume a hierarchical structure for the parameters $\lambda, \mu$ and $\kappa$,
 $$dX_{i,t} = \lambda_i (\mu_i - X_{i,t})dt + \sqrt{2 \kappa_i \lambda_i}dZ_t,$$
 for all $i \in \{i, \ldots, N\}$.
 
 
 ## The model
 
-The stochastic Gompertz model is one of the simplest available tools for modeling ecological time-series data and is transformed to the OUP via a log-transformation [@dennis_densitydependent_2014]. We model the observations of the latent OU driven t-process as a Poisson process. Although the observations times do not have to be equally spaced, this model requires them to be identical for each series. 
+The stochastic Gompertz model is one of the simplest available tools for modeling ecological time-series data and is transformed to the OUP via a log-transformation [@dennis_2014]. We model the observations of the latent OU driven t-process as a Poisson process. Although the observations times do not have to be equally spaced, this model requires them to be identical for each series. 
 
 The Stan code uses a non-centered parameterization that is modelled using the error terms $\epsilon_i$. We also experimented with the centered parameterization but with less accurate results and more divergent transitions. This is in agreement with [@stan_manual, p.145] where it was mentioned that hierarchical models tend to do better with non-centered parameterizations, especially when the sample size is limited.
 
@@ -212,7 +218,7 @@ n_obs <- 2:10
 Next we input simulated data to ```hier_concentered.stan```. 
 Sampling for the entire data set took a considerable amount of time on a basic laptop (1,3GHz, 4 cores), close to 11 hours, so the sampling block below is not evaluated. Default settings were used, but in order to decrease the amount of divergent transitions ```adapt_delta``` was set to 0.9. Divergencies were not eliminated altogether and the amount ranged from 0 to 50, averaging at about 7 per sampling. 
 
-```{r, eval=FALSE}
+```{r sampling, eval=FALSE}
 hier_model <- stan_model("hierarchical_noncentered.stan")
 fit_list <- list()
 for(i in 1:length(data_set)) {
@@ -259,6 +265,7 @@ results[[p]][["quan_table"]][series, obs] <- quan[[i]]
 
 }
 
+# generate plots
 source("OU.plots.R")
 ```
 
