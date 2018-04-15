@@ -62,3 +62,4 @@ success_rate_quantiles <- function(stan_fit, parameter="lambda", real_value=1, s
   }
   success/ncol(pos)
 }
+

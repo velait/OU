@@ -39,3 +39,4 @@ running_time <- running_time %>% round()
 #sampling times in minutes for 5 observations
 running_time_long <- data.frame(minutes=round(running_time[,"5"]/(60)),
                                 n_series=rownames(running_time)) %>%  kable()
+
