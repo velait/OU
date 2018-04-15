@@ -113,7 +113,7 @@ The Stan code uses a non-centered parameterization that is modelled using the er
 Shortly the idea of the Stan code is as follows. After declaring the data and parameters in the corresponding blocks, error terms $\epsilon_i$ and latent values $X_i$ are related in the transformed data block. In the model block parameters and conditional densities for the error terms are incremented to the log density and the observations $Y$ are sampled from a P oisson distribution with $X_i$ as the rate.
 
 
-```{stan output.var="test", eval = FALSE}
+```{stan output.var="hierarchical_noncentered", eval = FALSE}
 // Hierarchical model with equal time points, non-centered
 data{
 int <lower=0> N;          //Number of time series
