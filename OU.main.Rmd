@@ -3,8 +3,7 @@ title: "A Hierarchical extension to Ornstein-Uhlenbeck-type Student's t-processe
 author: "Ville Laitinen & Leo Lahti University of Turku velait@utu.fi"
 date: "20 3 2018"
 header-includes:
-  - \usepackage{tikz}
-- \usetikzlibrary{bayesnet}
+
 output:
   pdf_document:
   latex_engine: xelatex
@@ -14,11 +13,12 @@ bookdown::html_document2:
   fig_caption: yes
 bookdown::word_document2:
   fig_caption: yes    
-bibliography: bibliography.bib
+bibliography: OU_StanCon.bib
 ---
   
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(cache=TRUE)
 options(mc.cores = parallel::detectCores())
 
 library(rstan)
@@ -40,7 +40,7 @@ subblck <- captioner(prefix="Supplementary Chunk")
 
 set.seed(11235)
 source("OU.functions.R")
-source("OU.plots.R")
+
 ```
 
 ## Abstract
@@ -49,11 +49,10 @@ source("OU.plots.R")
 
 The aim of this work is to provide a hierarchical extension of the Ornstein-Uhlenbeck type processes, in order to aggregate information across multiple (short) time series. This extends the recent Stan implementation [@Goodman2018], where parameter estimates of a Student-t type OU process are obtained based on a single (long) time series. We have added a level of hierarchy, which allows inference of the model parameters based on multiple time series.
 We validate the implementation and investigate its robustness to variations in sample size and time series lengths  based on simulated data. 
+
+Motivation for this work comes from the analysis of human gut microbiome dynamics. It has been reported that on average the abundance of many gut bacteria remains relatively stable over long time periods [@david_host_2014]. On a shorter (daily) time scale these abundances do however have considerable fluctuations. A number of cross-sectional studies of the human microbiome have characterized the diversity and variation of the gut microbiome between individuals [e.g. @hmp_huttenhower, @Qin2009]. The temporal variation of different taxonomic units within individuals is, however, less well understood [@faust_metagenomics_2015]. One of the current challenges is that the currently available time series are often short, sparse and noisy, and robust inference of dynamical models can be challenging in such case. Some of these limitations can be addressed by adding a level of hierarchy to the model in order to aggregate information across multiple time series. In addition, such extensions can potentially help to analyze the individuality of the time series from different study subjects.
+
 Moreover, given the complex and highly individual nature of the gut ecosystem, exact dynamical models of the underlying system are missing. The OU-type processes provide means to characterize key properties of system dynamics, such as the location and resilience of the potential wells, in a non-parametric manner, when knowledge on the data-generating mechanisms is missing.  Therefore, variants of the OU process appear to provide rigorous and justified methods for modeling these dynamics. However, apart from [@Goodman2018] we are not aware of applications of these models, in particular its hierarchical extensions that we develop here, in the context of human microbiome studies. The methodology itself is very generic, and its potential applications naturally reach beyond population dynamics.
-Motivation for this work comes from the analysis of human gut microbiome dynamics. It has been reported that on average the abundance of many gut bacteria remains relatively stable over long time periods [@david_host_2014]. On a shorter (daily) time scale these abundances do however have considerable fluctuations. A number of cross-sectional studies of the human microbiome have characterized the diversity and variation of the gut microbiome between individuals [@etsi]. The temporal variation of different taxonomic units within individuals is, however, less well understood [@etsi]. One of the current challenges is that the currently available time series are often short, sparse and noisy, and robust inference of dynamical models can be challenging in such case [@etsi]. Some of these limitations can be addressed by adding a level of hierarchy to the model in order to aggregate information across multiple time series. In addition, such extensions can potentially help to analyze the individuality of the time series from different study subjects.
-
-
-
 
 
 ## Background
@@ -87,19 +86,20 @@ We will use this expression in the Stan code model block to increment the log de
 
 
 
-Propability density for one series:
-Let $\bar{Y} = (Y_1, Y_2, \ldots, Y_n)$ be a the measured time series and  $\bar{X} = (X_1, X_2, \ldots, X_n)$ the corresponding values of latent process with paramteres $\theta$. Then
-$$p(\theta, X_1, \ldots, X_n, Y_1, \ldots, Y_n) = p(\theta)p(X_1|\theta)p(Y_1|X_1)\prod_{i=2}^{n}p(Y_i|X_i)p(X_i|X_{i-1},\theta)$$
+<!-- Propability density for one series: -->
+<!-- Let $\bar{Y} = (Y_1, Y_2, \ldots, Y_n)$ be a the measured time series and  $\bar{X} = (X_1, X_2, \ldots, X_n)$ the corresponding values of latent process with paramteres $\theta$. Then -->
+<!-- $$p(\theta, X_1, \ldots, X_n, Y_1, \ldots, Y_n) = p(\theta)p(X_1|\theta)p(Y_1|X_1)\prod_{i=2}^{n}p(Y_i|X_i)p(X_i|X_{i-1},\theta)$$ -->
 
 #### Hierarchical extension
 The model outlined above essentially described the Ornstein-Uhlenbeck driven t-process as implemented in [@Goodman]. The novel contribution to this work that  we present now is in equipping the model with hierarchical structure and testing the robustness of the extended implementation. Let $\mathcal{X} = \{\bar{X_j}, j \in \{1, \ldots, N\}\}$ be a set of latent values, with $n_j$ observations in each, each $j$ respresenting e.g. a different measurement site. We assume a hierarchical structure for the parameters $\lambda, \mu$ and $\kappa$,
 $$dX_{i,t} = \lambda_i (\mu_i - X_{i,t})dt + \sqrt{2 \kappa_i \lambda_i}dZ_t,$$
 for all $i \in \{i, \ldots, N\}$.
-This does not essentially complicate the log likelihood of the model as ...
 
-The probability density now takes the form $$p(\bar{\theta}, \bar{X_1}, \ldots, \bar{X_N}, \bar{Y_1}, \ldots, \bar{Y_N}) =\prod_{j=1}^{N} p(\theta_j)p(X_{j,1}|\theta_j)p(Y_{j,1}|X_{j,1})\prod_{i=2}^{n_j}p(Y_{j,i}|X_{j,i})p(X_{j,i}|X_{j,i-1},\theta)$$
+<!-- This does not essentially complicate the log likelihood of the model as ... -->
 
-This follows from the fact that...
+<!-- The probability density now takes the form $$p(\bar{\theta}, \bar{X_1}, \ldots, \bar{X_N}, \bar{Y_1}, \ldots, \bar{Y_N}) =\prod_{j=1}^{N} p(\theta_j)p(X_{j,1}|\theta_j)p(Y_{j,1}|X_{j,1})\prod_{i=2}^{n_j}p(Y_{j,i}|X_{j,i})p(X_{j,i}|X_{j,i-1},\theta)$$ -->
+
+<!-- This follows from the fact that... -->
 
 
 
@@ -226,7 +226,7 @@ n_obs <- 2:10
 
 
 Next input simulated data to ```hier_concentered.stan```. 
-Sampling for the entire data set took a considerable amount of time on a basic laptop (1,3GHz, 4 cores), close to 11 hours,  so the entire data set is not sampled in this notebook. Default settings were used, but ```adapt_delta``` is set to 0.9. 
+Sampling for the entire data set took a considerable amount of time on a basic laptop (1,3GHz, 4 cores), close to 11 hours,  so the entire data set is not sampled in this notebook. Default settings were used, but in order to decrease the amount of divergent transitions ```adapt_delta``` was set to 0.9. Divergencies were not eliminated altogether and the amount ranged from 0 to 50, averaging at about 7 per smapling. 
 
 ```{r, eval=FALSE}
 hier_model <- stan_model("hierarchical_noncentered.stan")
@@ -236,7 +236,7 @@ fit_list[[names(data_set)[[i]]]] <- sampling(noncentered_hiearchical, data_set[[
 }
 ```
 
-#### (Add Warnings)
+
 
 We'll measure the success of parameter estimates in two ways. An estimate is considered successful if the real value used in simulation lies within the 95% highest posterior density interval or between the 2.5% and 97.5% percentiles of the posterior. Then we'll calculate the proportion of succesful estimates per data set. 
 
@@ -273,7 +273,7 @@ results[[p]][["quan_table"]][series, obs] <- quan[[i]]
 
 }
 
-
+source("OU.plots.R")
 ```
 
 
@@ -308,7 +308,7 @@ grid.arrange(success_plots[["kappa"]][["hpdi_table"]][[2]], success_plots[["kapp
 
 ### Running time
 
-Below the sampling times are presented. 
+The sampling times presented below, seem to grow in $O(n)$ time.
 
 ```{r running_time_long}
 running_time_long
@@ -359,6 +359,6 @@ The HIT Chip Atlas data set [@TippingElements], consists of stool samples from 1
 ## Warnings
 
 
-# Bibliography
+
 
 
