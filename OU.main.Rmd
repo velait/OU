@@ -5,14 +5,14 @@ date: "20 3 2018"
 header-includes:
 
 output:
-  pdf_document:
+pdf_document:
   latex_engine: xelatex
 word_document:
-  fig_caption: yes
+  fig_caption: yes  
 bookdown::html_document2:
   fig_caption: yes
 bookdown::word_document2:
-  fig_caption: yes    
+  fig_caption: yes
 # bibliography: OU_StanCon.bib
 ---
   
@@ -40,10 +40,7 @@ subblck <- captioner(prefix="Supplementary Chunk")
 
 set.seed(11235)
 source("OU.functions.R")
-
 ```
-
-## Abstract
 
 ## Introduction
 
@@ -86,22 +83,10 @@ We will use this expression in the Stan code model block to increment the log de
 
 
 
-<!-- Propability density for one series: -->
-<!-- Let $\bar{Y} = (Y_1, Y_2, \ldots, Y_n)$ be a the measured time series and  $\bar{X} = (X_1, X_2, \ldots, X_n)$ the corresponding values of latent process with paramteres $\theta$. Then -->
-<!-- $$p(\theta, X_1, \ldots, X_n, Y_1, \ldots, Y_n) = p(\theta)p(X_1|\theta)p(Y_1|X_1)\prod_{i=2}^{n}p(Y_i|X_i)p(X_i|X_{i-1},\theta)$$ -->
-
 #### Hierarchical extension
 The model outlined above essentially described the Ornstein-Uhlenbeck driven t-process as implemented in [@Goodman]. The novel contribution to this work that  we present now is in equipping the model with hierarchical structure and testing the robustness of the extended implementation. Let $\mathcal{X} = \{\bar{X_j}, j \in \{1, \ldots, N\}\}$ be a set of latent values, with $n_j$ observations in each, each $j$ respresenting e.g. a different measurement site. We assume a hierarchical structure for the parameters $\lambda, \mu$ and $\kappa$,
 $$dX_{i,t} = \lambda_i (\mu_i - X_{i,t})dt + \sqrt{2 \kappa_i \lambda_i}dZ_t,$$
 for all $i \in \{i, \ldots, N\}$.
-
-<!-- This does not essentially complicate the log likelihood of the model as ... -->
-
-<!-- The probability density now takes the form $$p(\bar{\theta}, \bar{X_1}, \ldots, \bar{X_N}, \bar{Y_1}, \ldots, \bar{Y_N}) =\prod_{j=1}^{N} p(\theta_j)p(X_{j,1}|\theta_j)p(Y_{j,1}|X_{j,1})\prod_{i=2}^{n_j}p(Y_{j,i}|X_{j,i})p(X_{j,i}|X_{j,i-1},\theta)$$ -->
-
-<!-- This follows from the fact that... -->
-
-
 
 
 ## The model
@@ -114,7 +99,6 @@ Shortly the idea of the Stan code is as follows. After declaring the data and pa
 
 
 ```
-
 data{
 int <lower=0> N;          //Number of time series
 int <lower=0> T;          //Number of time points, same in each
@@ -225,8 +209,8 @@ n_obs <- 2:10
 ```
 
 
-Next input simulated data to ```hier_concentered.stan```. 
-Sampling for the entire data set took a considerable amount of time on a basic laptop (1,3GHz, 4 cores), close to 11 hours,  so the entire data set is not sampled in this notebook. Default settings were used, but in order to decrease the amount of divergent transitions ```adapt_delta``` was set to 0.9. Divergencies were not eliminated altogether and the amount ranged from 0 to 50, averaging at about 7 per sampling. 
+Next we input simulated data to ```hier_concentered.stan```. 
+Sampling for the entire data set took a considerable amount of time on a basic laptop (1,3GHz, 4 cores), close to 11 hours, so the sampling block below is not evaluated. Default settings were used, but in order to decrease the amount of divergent transitions ```adapt_delta``` was set to 0.9. Divergencies were not eliminated altogether and the amount ranged from 0 to 50, averaging at about 7 per sampling. 
 
 ```{r, eval=FALSE}
 hier_model <- stan_model("hierarchical_noncentered.stan")
@@ -242,6 +226,7 @@ fit_list[[names(data_set)[[i]]]] <-
 We'll measure the success of parameter estimates in two ways. An estimate is considered successful if the real value used in simulation lies within the 95% highest posterior density interval or between the 2.5% and 97.5% percentiles of the posterior. Then we'll calculate the proportion of succesful estimates per data set. 
 
 ```{r, message=FALSE, warning=FALSE}
+
 results <- list()
 simulation_value <- c(kappa=0.1, lambda=1, mu=5, student_df=7)
 for(p in c("kappa", "lambda", "mu")) {
@@ -313,7 +298,7 @@ grid.arrange(success_plots[["kappa"]][["hpdi_table"]][[2]],
 
 ### Running time
 
-The sampling times presented below, seem to grow in $O(n)$ time.
+The sampling times presented below seem to grow in $O(n)$ time.
 
 ```{r running_time_long}
 running_time_long
@@ -355,7 +340,7 @@ The main objective of this work was to extend a previously propsed implementatio
 
 The tests of robustness executed here provide only preliminary results of the model capabilities. For a complete picture an extensive probing of different parameter ranges and priors should be undertaken. Alternative parameterizations should be tested to see if some perform better with higher sample sizes. As the OU process can be considered an extensions of the autoregressive AR(1) model with arbitrary time intervals, we are planning to develop this work further by enabling the time series to have unequal amounts of observations and unequal measurement times. This would allow the analysis of time series with missing values and eliminate the need for interpolation and forcing even observation times. 
 
-The HIT Chip Atlas data set [@TippingElements], consists of stool samples from 1006 Western individuals with multiple (2-5) time points for 78 subjects, and provides an interesting opporturnity to test the model on real data. This has motivated the work presented here, and we are next planning apply our validated implementation on this real case study of the human gut microbiome analysis.
+The HIT Chip Atlas data set [@TippingElements], consists of stool samples from 1006 Western individuals with multiple (2-5) time points for 78 subjects, and provides an interesting opporturnity to test the model on real data. This has motivated the work presented here, and we are next planning to apply our validated implementation on this real case study of the human gut microbiome analysis.
 
 \newpage
 
