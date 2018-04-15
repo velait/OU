@@ -1,4 +1,4 @@
-// Hierarchical model with equal time points, non-centered
+// Hierarchical model with equal time points, non-centered parametization
 data{
   int <lower=0> N;          //Number of time series
   int <lower=0> T;          //Number of time points, same in each
@@ -65,7 +65,7 @@ model{
       target += -0.5 * log(student_df + cum_error_terms2[k] - 2);
     }
   }
-  // Log probability for the observations given the latent values
+  // Log likelihood for the observations given the latent values
   for(i in 1:N) {
     Y[i] ~ poisson_log(X_latent[i]);
   }
