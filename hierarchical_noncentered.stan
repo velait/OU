@@ -1,13 +1,16 @@
-// Hierarchical model with equal time points, non-centered parametization
+// Hierarchical model with equal time points, non-centered
+// Declare data variables 
 data{
-  int <lower=0> N;          //Number of time series
-  int <lower=0> T;          //Number of time points, same in each
+  int<lower=0> N;          //Number of time series
+  int<lower=0> T;          //Number of time points, same in each
   int<lower=0> Y[N,T];      //observations matrix as 2D array
   vector[T] time;           //observation times
 }
+// Make some necessary data transformations
 transformed data{
   vector[T] time_vec = to_vector(time);
 }
+// Parameter declared in parameters and transformed paramters blocks will be estimated
 parameters{
   vector[N] lambda_log; 
   vector[N] kappa_log;  
@@ -15,20 +18,22 @@ parameters{
   real <lower=2> student_df; 
   matrix[N,T] error_terms;   //Error terms
 }
+// Parameter transformations
 transformed parameters{
+  // Define some helper terms 
   vector[N] sigma_log = 0.5*(kappa_log + lambda_log + log2());
   vector<lower=0>[N] sigma = exp(sigma_log);
   vector<lower=0>[N] lambda = exp(lambda_log);
   vector<lower=0>[N] kappa = exp(kappa_log);
   vector<lower=0>[N] kappa_inv = exp(-kappa_log);
   vector<lower=0>[N] kappa_sqrt = exp(0.5*kappa_log);
+  
+  // Store the latent OUP values 
   matrix[N, T] X_latent; 
   
-  // Relate error terms to latent values
+  // Relation between error terms and latent values
   for(i in 1:N){
-    
-    vector [T-1] delta_t = segment(time_vec, 2, T - 1) - segment(time_vec,1,T-1);
-    real cum_squares = 0;
+    vector [T-1] delta_t = time_vec[2:T] - time_vec[1:T-1];
     real X;
     
     for(k in 1:T){
@@ -48,31 +53,35 @@ transformed parameters{
   
 }
 model{
-  target += lambda_log;
-  target += kappa_log;
-  student_df ~ gamma(2,.1);
+  // Add Jacobians of lambda and kappa transformations
+  target += sum(lambda_log);
+  target += sum(kappa_log);
   
-  // Increment the log probability according to the conditional expression for
-  // the error terms 
+  // Add log densities of error terms to target log density
   for(i in 1:N){
-    // row vector to regular
-    vector[T] error_terms2 = to_vector(square(segment(error_terms[i],1,T)));
+    vector[T] error_terms2 = to_vector(square(error_terms[i][1:T]));
     vector[T] cum_error_terms2 = cumulative_sum(append_row(0,error_terms2[1:T-1]));    
+    
+    vector[T] student_df_err = student_df - 2 + cum_error_terms2;
+    vector[T] log_student_df_err = log(student_df_err);
     
     for(k in 1:T){
       target +=  (lgamma((student_df + k) * 0.5) - lgamma((student_df+ k - 1 )* 0.5));     
-      target += -0.5 * (student_df + k) * log1p(error_terms2[k] / (student_df + cum_error_terms2[k] - 2));
-      target += -0.5 * log(student_df + cum_error_terms2[k] - 2);
+      target += -0.5 * log_student_df_err[k];
     }
+    
+      target += -0.5 * (student_df + k) * log1p(error_terms2 / (student_df - 2 + cum_error_terms2));
+      
   }
-  // Log likelihood for the observations given the latent values
-  for(i in 1:N) {
-    Y[i] ~ poisson_log(X_latent[i]);
-  }
+  
+  // Log probability for the observations given the latent values
+  
+    Y ~ poisson_log(X_latent);
+  
   
   // Prior probabilities.
   lambda ~ gamma(2,2);
   kappa ~ gamma(2,2);
-  mu ~ normal(0,5); 
-  
+  mu ~ normal(5,5); 
+  student_df ~ gamma(2,.1);
 }
