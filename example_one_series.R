@@ -10,7 +10,7 @@ original_model <- stan_model("original_noncentered.stan")
 
 #### data ####
 #model parameters
-kappa <- .5
+kappa <- .1
 lambda <- 1
 mu <- 10
 t.df <- 5
