@@ -8,8 +8,6 @@ data{
 }
 transformed data{
   
-  
-  
   vector[T] observation_vec = to_vector(observations);
   vector[T] time_vec = to_vector(time);
   

@@ -68,15 +68,17 @@ model{
     for(k in 1:T){
       target +=  (lgamma((student_df + k) * 0.5) - lgamma((student_df+ k - 1 )* 0.5));     
       target += -0.5 * log_student_df_err[k];
+      
+      target += -0.5 * (student_df + k) * log1p(error_terms2[k] / (student_df - 2 + cum_error_terms2[k]));
     }
     
-      target += -0.5 * (student_df + k) * log1p(error_terms2 / (student_df - 2 + cum_error_terms2));
+    // Log probability for the observations given the latent values
+  
+    Y[i] ~ poisson_log(X_latent[i]);
       
   }
   
-  // Log probability for the observations given the latent values
   
-    Y ~ poisson_log(X_latent);
   
   
   // Prior probabilities.
