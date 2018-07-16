@@ -84,7 +84,7 @@ Conditional expression for the density of error terms can be derived from Lemma 
 $$\epsilon_i | \epsilon_{1},\ldots, \epsilon_{i-1} \sim \textrm{MVT}_1 \Big(\nu+i-1, 0, \frac{\nu -2 + \sum_{k=1}^{i-1}\epsilon_k^2}{\nu -3 + i} \Big), $$
 which reduces to
 
-$$p(\epsilon_i| \epsilon_{1},\ldots, \epsilon_{i-1}) \propto \Gamma(\tfrac{\nu+i}{2})\Gamma(\tfrac{\nu+i-1}{2})^{-\tfrac{1}{2}}\big(\nu -2 + \sum_{k=1}^{i-1}\epsilon_{k}^{2}\big)^{-\frac{1}{2}} \Big(1+ \frac{\epsilon_i^2}{\nu -2+\sum_{k=1}^{i-1}\epsilon_k^2} \Big)^{\frac{\nu + i}{2}}.$$
+$$p(\epsilon_i| \epsilon_{1},\ldots, \epsilon_{i-1}) \propto \Gamma(\tfrac{\nu+i}{2})\Gamma(\tfrac{\nu+i-1}{2})^{-1}\big(\nu -2 + \sum_{k=1}^{i-1}\epsilon_{k}^{2}\big)^{-\frac{1}{2}} \Big(1+ \frac{\epsilon_i^2}{\nu -2+\sum_{k=1}^{i-1}\epsilon_k^2} \Big)^{\frac{\nu + i}{2}}.$$
 We will use this expression in the Stan code model block to increment the log density.
 
 

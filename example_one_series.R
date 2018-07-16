@@ -1,4 +1,5 @@
 seed <- 1
+library(rstan)
 source("OU.functions.R")
 
 # all cores
@@ -22,7 +23,7 @@ long_series <- generate_a_series(kappa, lambda, mu, intervals = intervals, t.df 
 
 # low number of chains for testing
 chains <- 2
-iter <- 4000
+iter <- 2000
 
 # one long series, estimates OK
 # Warnings: BFMI low, max treedepth exceedings

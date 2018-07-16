@@ -1,10 +1,13 @@
 //Copyright 2017 Aaron Goodman <aaronjg@stanford.edu>. Licensed under the GPLv3 or later.
 data{
-  int <lower=0> T;               // number of samples
+  int <lower=0> T;               // total number of samples
   int <lower=0> n_series;        // number of series
   int <lower=0> samples_per_series[n_series]; 
   int <lower=0> observations[T]; // observation concatenated
   vector [T] time;               // observation times concatenated
+  
+  vector[n_series] kappa_log;
+  vector[n_series] mu;
 }
 transformed data{
   
@@ -18,23 +21,25 @@ transformed data{
       sample_start[i] = sample_start[i-1] + samples_per_series[i-1];
   }
   
+
+  
 }
 
 parameters{
-  real lambda_log;
-  real kappa_log;
-  real mu;
+  vector[n_series] lambda_log;
+  // vector[n_series] kappa_log;
+  // vector[n_series] mu;
   real <lower=2> student_df;
-  vector[T] epsilon; // t-process observations
+  vector[T] epsilon; // t-process 
 }
 
 transformed parameters{
-  real sigma_log = 0.5*(kappa_log + lambda_log + log2());
-  real sigma = exp(sigma_log);
-  real lambda = exp(lambda_log);
-  real kappa = exp(kappa_log);
-  real kappa_inv = exp(-kappa_log);
-  real kappa_sqrt = exp(0.5*kappa_log);
+  vector[n_series] sigma_log = 0.5*(kappa_log + lambda_log + log2());
+  vector[n_series] sigma = exp(sigma_log);
+  vector[n_series] lambda = exp(lambda_log);
+  vector[n_series] kappa = exp(kappa_log);
+  vector[n_series] kappa_inv = exp(-kappa_log);
+  vector[n_series] kappa_sqrt = exp(0.5*kappa_log);
   vector[T] latent_observation;
   
   // For each raw latent observation, transform it using the
@@ -52,12 +57,12 @@ transformed parameters{
       real lv_raw = epsilon[offset + k];
       if(k == 0){
         //For the first latent observation use the stationary distribution.
-        lv = mu + lv_raw * kappa_sqrt;
+        lv = mu[i] + lv_raw * kappa_sqrt[i];
       }else{
         real t = time_diff[k];
-        real exp_neg_lambda_t = exp(-t*lambda);
-        real sd_scale = kappa_sqrt .* sqrt(1-square(exp_neg_lambda_t));
-        lv = mu - (mu - lv) .* exp_neg_lambda_t + lv_raw .* sd_scale;
+        real exp_neg_lambda_t = exp(-t*lambda[i]);
+        real sd_scale = kappa_sqrt[i] .* sqrt(1-square(exp_neg_lambda_t));
+        lv = mu[i] - (mu[i] - lv) .* exp_neg_lambda_t + lv_raw .* sd_scale;
         last_t = t;
       }
       latent_observation[offset+k] = lv;
@@ -66,30 +71,33 @@ transformed parameters{
   }
 }
 model {
-  target += lambda_log;
-  target += kappa_log;
-  student_df ~ gamma(2,.1);
+  
+  target += sum(lambda_log);
+  target += sum(kappa_log);
+  
   
   // Increment the log probability according to the conditional expression for
   // the unit multivariate t-distribution.
   for(i in 1:n_series){
     int n = samples_per_series[i];
     int offset = sample_start[i];
-    vector [n] sq_lv = square(segment(epsilon,offset,n));
-    vector [n] cum_squares = cumulative_sum(append_row(0,sq_lv[1:n-1]));    
-    
-    for(k in 1:T){
+    vector[n] sq_lv = square(epsilon[offset:(offset + n - 1)]);
+    vector[n] cum_squares = cumulative_sum(append_row(0,sq_lv[1:n-1]));    
+    for(k in 1:samples_per_series[i]){
       target +=  (lgamma((student_df + k) * 0.5) - lgamma((student_df+ k - 1 )* 0.5));     
       target += -0.5 * (student_df + k) * log1p(sq_lv[k] / (student_df + cum_squares[k] - 2));
       target += -0.5 * log(student_df + cum_squares[k] - 2);
     }
+    
   }
   
   // Add the log probability for the observations given the latent observations
   observations ~ poisson_log(latent_observation);
   
+  
   // Prior probabilities (not the original ones).
   lambda ~ normal(0,5);
   kappa  ~ normal(0,5);
   mu     ~ normal(0,5);
+  student_df ~ gamma(2,.1);
 }

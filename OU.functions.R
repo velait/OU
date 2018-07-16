@@ -1,5 +1,29 @@
 # Functions
 
+# Alternative generator
+ou_simulator <- function (T, mu, lambda, kappa, x0 = NULL, seed=1) {
+  seed <- seed
+  x <- c()
+  
+  # Initial value
+  if (is.null(x0)) {
+    x[[1]] <- mu + rnorm(1) * sqrt(kappa)
+  } else {
+    x[[1]] <- x0
+  }
+  
+  # Consecutive values
+  for (t in 2:T) {
+    x[[t]] <- mu - (mu - x[[t-1]]) * exp(-lambda) + rnorm(1) * sqrt(kappa * (1 - exp(-2 * lambda)))
+  }
+  list(observations = rpois(T,exp(x)), T=T, n_series=1, samples_per_series=as.array(T), time=1:T)
+  
+  
+}
+
+
+
+
 # original generator
 generateStanData <- function(kappa,
                              lambda,
@@ -17,7 +41,10 @@ generateStanData <- function(kappa,
   scale <- if(is.finite(t.df)) rep(sqrt(rgamma(1,t.df/2,(t.df-2)/2)),each=N) else 1
   out.data <- list()
   out.data$latent_value <- as.vector(t(L) %*% (rnorm(N) * scale)) + mu
+  
   out.data$value <- rpois(N,exp(out.data$latent_value))
+  
+  
   out.data$time <- intervals
   out.data$replicates <- 1L
   out.data$replicate_samples <- array(length(intervals))
@@ -186,4 +213,7 @@ success_rate_quantiles <- function(stan_fit, parameter="lambda", real_value=1, s
   }
   success/ncol(pos)
 }
+
+
+
 
