@@ -16,6 +16,8 @@ ou_simulator <- function (T, mu, lambda, kappa, x0 = NULL, seed=1) {
   for (t in 2:T) {
     x[[t]] <- mu - (mu - x[[t-1]]) * exp(-lambda) + rnorm(1) * sqrt(kappa * (1 - exp(-2 * lambda)))
   }
+  
+  #gompertz assumptions, poisson model
   list(observations = rpois(T,exp(x)), T=T, n_series=1, samples_per_series=as.array(T), time=1:T)
   
   

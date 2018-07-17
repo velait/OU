@@ -20,9 +20,9 @@ t.df <- 5
 intervals <- 1:100
 
 # data with different variable names
-long_series <- ou_simulator(T=100, mu=mu, lambda=lambda, kappa=kappa, x0=6, seed=1)
+long_series <- ou_simulator(T = 50, mu=mu, lambda=lambda, kappa=kappa)
 
-long_series2 <- ou_simulator(T=100, mu=mu, lambda=lambda, kappa=kappa, x0=6, seed=2)
+long_series2 <- ou_simulator(T = 50,  mu=mu, lambda=lambda, kappa=kappa)
 
 # two long series
 concatenate_two_series <- concatenate_series(long_series, long_series2)
