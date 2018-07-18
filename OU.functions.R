@@ -35,7 +35,7 @@ generateStanData <- function(kappa,
                              seed = 1){
   set.seed(seed)
   N <- length(intervals)
-  lv.variates <- rnorm(N)
+  # lv.variates <- rnorm(N)
   dt <- outer(intervals,intervals,function(x,y) abs(x-y))
   x <- kappa * exp(-lambda*dt)
   L <- chol(x)
@@ -55,17 +55,19 @@ generateStanData <- function(kappa,
 }
 
 # original generator w different parameter names
-generate_a_series <- function(kappa,
-         lambda,
-         mu,
-         intervals,
-         t.df = Inf,
-         seed = 1){
+generate_a_series <- function(kappa=NULL, sigma=NULL, lambda, mu, intervals, t.df = Inf, seed = 1){
   set.seed(seed)
   N <- length(intervals)
   lv.variates <- rnorm(N)
   dt <- outer(intervals,intervals,function(x,y) abs(x-y))
-  x <- kappa * exp(-lambda*dt)
+  
+  if(!is.null(kappa)) {
+    x <- kappa * exp(-lambda*dt)
+  } else {
+    x <- (sigma^2)/lambda * exp(-lambda*dt)
+  }
+  
+  
   L <- chol(x)
   
   scale <- if(is.finite(t.df)) rep(sqrt(rgamma(1,t.df/2,(t.df-2)/2)),each=N) else 1
@@ -77,6 +79,18 @@ generate_a_series <- function(kappa,
   out.data$samples_per_series <- array(length(intervals))
   out.data$T <- length(intervals)
   out.data
+}
+
+generate_n_series <- function(n, kappa=NULL, sigma=NULL, lambda, mu, intervals, t.df = Inf, seed = 1) {
+  
+  s_list <- list()
+  
+  for(i in 1:n) {
+    slist[[i]] <- generate_a_series(kappa=NULL, sigma=NULL, lambda, mu, intervals, t.df = Inf, seed = seed + i)
+  }
+  
+  s_list
+  
 }
 
 # Generate one long for the original
@@ -249,20 +263,74 @@ samples_df <- function(sample_list) {
 }
 
 # plot the posterior intervals
-plot_posteriors <- function(res_df, sim_value) {
+plot_posteriors <- function(res_df, sim_value, par) {
   p <- ggplot(res_df, aes(x=length, y=mode)) + 
     geom_errorbar(aes(ymin=lower25, ymax=upper75), width=1) +
     geom_line() +
-    geom_point() + geom_hline(yintercept = sim_value, linetype="dashed") + labs(y="Estimate", x="Length", title="Lambda estimates with 50% error bars vs. series length", subtitle=paste0("Simulation value lambda = ", sim_value)) + theme_bw() + scale_y_continuous(limits = c(0, 6.5))
+    geom_point() + geom_hline(yintercept = sim_value, linetype="dashed") + labs(y="Estimate", x="Length", title=paste0(par ,"estimates with 50% error bars vs. series length"), subtitle=paste0("Simulation value lambda = ", sim_value)) + theme_bw() + scale_y_continuous(limits = c(0, 6.5))
   
   p
 } 
 
+# hierarchial plotter
 plot_hier_posteriors <- function(res_df, sim_value) {
   p <- ggplot(res_df, aes(x=length, y=mode, group=group, color=group)) + 
     geom_errorbar(aes(ymin=lower25, ymax=upper75), width=1) +
     geom_line() +
-    geom_point()  + geom_hline(yintercept = sim_value, linetype="dashed", color="black") + labs(y="Estimate", x="Length", title="Lambda estimates with 50% error bars vs. series length") + theme_bw() + scale_color_manual(values=c("#f1a340", "#998ec3")) + scale_y_continuous(limits = c(0, 7))
+    geom_point()  + geom_hline(yintercept = sim_value, linetype="dashed", color="black") + labs(y="Estimate", x="Length", title="Lambda estimates with 50% error bars vs. series length") + theme_bw() + scale_color_manual(values=c("#f1a340", "#998ec3")) + scale_y_continuous(limits = c(0, max(res_df$upper)))
   
   p
+}
+
+
+
+
+samples_df_par <- function(sample_list, par) {
+  
+  res_df <- matrix(NA, length(sample_list), 4)
+  
+  colnames(res_df) <- c("length", "lower25", "mode", "upper75")
+  
+  j <- 1
+  for(i in sample_list) {
+    res <- summary(i)$summary[par,c("25%", "50%", "75%")]
+    
+    res_df[j, c("lower25", "mode", "upper75")] <- res
+    j <- j + 1
+  }
+  
+  res_df[, "length"] <- as.numeric(names(sample_list))
+  res_df <- res_df %>% as.data.frame()
+  
+  res_df
+  
+}
+
+
+
+
+
+# sigma generator
+generate_a_sigma_series <- function(kappa,
+                              lambda,
+                              mu,
+                              intervals,
+                              t.df = Inf,
+                              seed = 1){
+  set.seed(seed)
+  N <- length(intervals)
+  lv.variates <- rnorm(N)
+  dt <- outer(intervals,intervals,function(x,y) abs(x-y))
+  x <- (.5^2)/lambda * exp(-lambda*dt)
+  L <- chol(x)
+  
+  scale <- if(is.finite(t.df)) rep(sqrt(rgamma(1,t.df/2,(t.df-2)/2)),each=N) else 1
+  out.data <- list()
+  out.data$observations <- as.vector(t(L) %*% (rnorm(N) * scale)) + mu
+  # out.data$observations <- rpois(N,exp(as.vector(t(L) %*% (rnorm(N) * scale))+mu))
+  out.data$time <- intervals
+  out.data$n_series <- 1L
+  out.data$samples_per_series <- array(length(intervals))
+  out.data$T <- length(intervals)
+  out.data
 }
