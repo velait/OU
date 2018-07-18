@@ -3,7 +3,7 @@ data{
   int <lower=0> T;               // number of samples
   int <lower=0> n_series;        // number of series
   int <lower=0> samples_per_series[n_series]; 
-  int <lower=0> observations[T]; // observation concatenated
+  real <lower=0> observations[T]; // observation concatenated
   vector [T] time;               // observation times concatenated
 }
 transformed data{
@@ -86,7 +86,7 @@ model {
   }
   
   // Add the log probability for the observations given the latent observations
-  observations ~ poisson_log(latent_observation);
+  observations ~ normal(latent_observation, 0.01);
   
   // Prior probabilities (not the original ones).
   lambda ~ normal(0,5);

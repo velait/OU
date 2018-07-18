@@ -17,8 +17,8 @@ ou_simulator <- function (T, mu, lambda, kappa, x0 = NULL, seed=1) {
     x[[t]] <- mu - (mu - x[[t-1]]) * exp(-lambda) + rnorm(1) * sqrt(kappa * (1 - exp(-2 * lambda)))
   }
   
-  #gompertz assumptions, poisson model
-  list(observations = rpois(T,exp(x)), T=T, n_series=1, samples_per_series=as.array(T), time=1:T)
+  #gompertz assumptions, poisson model 
+  list(observations = x, T=T, n_series=1, samples_per_series=as.array(T), time=1:T)
   
   
 }
@@ -70,8 +70,8 @@ generate_a_series <- function(kappa,
   
   scale <- if(is.finite(t.df)) rep(sqrt(rgamma(1,t.df/2,(t.df-2)/2)),each=N) else 1
   out.data <- list()
-  # out.data$latent_value <- as.vector(t(L) %*% (rnorm(N) * scale)) + mu
-  out.data$observations <- rpois(N,exp(as.vector(t(L) %*% (rnorm(N) * scale))+mu))
+  out.data$observations <- as.vector(t(L) %*% (rnorm(N) * scale)) + mu
+  # out.data$observations <- rpois(N,exp(as.vector(t(L) %*% (rnorm(N) * scale))+mu))
   out.data$time <- intervals
   out.data$n_series <- 1L
   out.data$samples_per_series <- array(length(intervals))
@@ -167,16 +167,24 @@ generate_data_set <- function(kappa=0.1, lambda=0.5, mu=5, intervals, n_series,
 
 
 # concatenate series
-concatenate_series <- function(s1, s2) {
+concatenate_series <- function(s_list) {
   
-  obs <- c(s1[["observations"]], s2[["observations"]])
-  t <- c(s1[["time"]], s2[["time"]])
-  n <- 2
-  s <- c(s1[["samples_per_series"]], s2[["samples_per_series"]])
+  obs <- c()
+  t <- c()
+  s <- c()
+  for(i in 1:length(s_list)) {
+    obs <- c(obs, s_list[[i]][["observations"]])
+    t <- c(t, s_list[[i]][["time"]])
+    s <- c(s, s_list[[i]][["samples_per_series"]])
+    kappa_log <- c(s_list[[1]][["kappa_log"]], s_list[[2]][["kappa_log"]])
+    mu=c(s_list[[1]][["mu"]], s_list[[2]][["mu"]])
+    
+  }
+  
   T <- length(obs)
+  n <- length(s_list)
   
-  
-  list(observations=obs, time=t, n_series=n, samples_per_series=s, T=T)
+list(observations=obs, time=t, n_series=n, samples_per_series=s, T=T, kappa_log=kappa_log, mu=mu)
   
 }
 
@@ -219,3 +227,42 @@ success_rate_quantiles <- function(stan_fit, parameter="lambda", real_value=1, s
 
 
 
+
+# Get df with lenght, mode and 50% intervals 
+samples_df <- function(sample_list) {
+  res_df <- matrix(NA, length(sample_list), 4)
+  
+  colnames(res_df) <- c("length", "lower25", "mode", "upper75")
+  
+  j <- 1
+  for(i in sample_list) {
+    res <- summary(i)$summary[grep("lambda\\[", rownames(summary(i)$summary)),c("25%", "50%", "75%")]
+    
+    res_df[j, c("lower25", "mode", "upper75")] <- res
+    j <- j + 1
+  }
+  
+  res_df[, "length"] <- as.numeric(names(sample_list))
+  res_df <- res_df %>% as.data.frame()
+  
+  res_df
+}
+
+# plot the posterior intervals
+plot_posteriors <- function(res_df, sim_value) {
+  p <- ggplot(res_df, aes(x=length, y=mode)) + 
+    geom_errorbar(aes(ymin=lower25, ymax=upper75), width=1) +
+    geom_line() +
+    geom_point() + geom_hline(yintercept = sim_value, linetype="dashed") + labs(y="Estimate", x="Length", title="Lambda estimates with 50% error bars vs. series length", subtitle=paste0("Simulation value lambda = ", sim_value)) + theme_bw() + scale_y_continuous(limits = c(0, 6.5))
+  
+  p
+} 
+
+plot_hier_posteriors <- function(res_df, sim_value) {
+  p <- ggplot(res_df, aes(x=length, y=mode, group=group, color=group)) + 
+    geom_errorbar(aes(ymin=lower25, ymax=upper75), width=1) +
+    geom_line() +
+    geom_point()  + geom_hline(yintercept = sim_value, linetype="dashed", color="black") + labs(y="Estimate", x="Length", title="Lambda estimates with 50% error bars vs. series length") + theme_bw() + scale_color_manual(values=c("#f1a340", "#998ec3")) + scale_y_continuous(limits = c(0, 7))
+  
+  p
+}
