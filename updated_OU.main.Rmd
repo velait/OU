@@ -4,7 +4,7 @@ author: |
   | Ville Laitinen & Leo Lahti 
   | University of Turku
   | velait@utu.fi
-date: "15.4.2018"
+date: "r Sys.Date()"
 header-includes:
 
 output:
