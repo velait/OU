@@ -43,15 +43,26 @@ subblck <- captioner(prefix="Supplementary Chunk")
 
 set.seed(11235)
 source("OU.functions.R")
+source("OU.source.R")
 
 #Load data if available. If not, set eval = TRUE in sampling chunk.
-load("OU_fit_list")
+
+
+# rmarkdown::render("updated_OU.main.Rmd")
+
+
+
+# to (relative) quickly run the script:
+chains <- 2
+iter <- 10
+
 ```
 
 ## Introduction
 
-The aim of this work is to provide a hierarchical extension of the Ornstein-Uhlenbeck type processes, in order to aggregate information across multiple (short) time series. This extends the recent Stan implementation [@Goodman2018], where parameter estimates of a Student-t type OU process are obtained based on a single (long) time series. We have added a level of hierarchy, which allows inference of the model parameters based on multiple time series.
-We validate the implementation and investigate its robustness to variations in sample size and time series lengths  based on simulated data. 
+The aim of this work is to provide a hierarchical extension of the Ornstein-Uhlenbeck type processes, in order to aggregate information across multiple (short) time series. This extends the recent Stan implementation [@Goodman2018], where parameter estimates of a Student-t type OU process are obtained based on a single (long) time series. We have added a level of hierarchy, which in principle allows inference of the model parameters based on multiple time series.
+
+Inference of all of the model parameters is not realiable in the version at hand. Because of difficulties in estimating one of the three model parameters we have decided to focus our analysis on the most interesting one in terms of our application, the mean-reversion parameter. Thus the validation of our implementation is deficient but we never the less investigate its robustness to variations in sample size and time series lengths based on simulated data. 
 
 Motivation for this work comes from the analysis of human gut microbiome dynamics. It has been reported that on average the abundance of many gut bacteria remains relatively stable over long time periods [@david_host_2014]. On a shorter (daily) time scale these abundances do however have considerable fluctuations. A number of cross-sectional studies of the human microbiome have characterized the diversity and variation of the gut microbiome between individuals [e.g. @hmp_huttenhower; @Qin2009]. The temporal variation of different taxonomic units within individuals and meta data groups is, however, less well understood [@faust_metagenomics_2015]. One of the current challenges is that the currently available time series are often short, sparse and noisy, and robust inference of dynamical models can be challenging in such case. Some of these limitations can be addressed by adding a level of hierarchy to the model in order to aggregate information across multiple time series. In addition, such extensions can potentially help to analyze the individuality of the time series from different study subjects.
 
@@ -65,8 +76,9 @@ where $X_t$ is the state of the system at time t and $Z$ a stochastic process. U
 
 The first term on the right hand side ("drift") describes the deterministic behavior and the second term ("dispersion") characterises the stochasticity of the system. The parameters have natural interpretations as mean-reversion rate ($\lambda$), mean ($\mu$) and scale of stochastic fluctuations ($\sigma$). There is a connection between $\lambda$ and the expect half life of a perturbation: $T_{1/2} = \frac{\log2}{\lambda}$.
 
-![](oup_example_plot.jpg)
-![](oup_example_plot2.jpg)
+```{r, fig.width=12}
+grid.arrange(oup_example_plot, oup_example_plot2, nrow=2)
+```
 
 `r figs(name="oup_example_plots","A larger lambda value increase the mean-reversion rate. Stochasticity decreases with a smaller sigma.")`
 
@@ -74,9 +86,6 @@ Usually the stochastic process is modeled as white noise but for practical purpo
 $$p(\bar{y}) = \frac{\Gamma(\frac{\nu + n}{2})}{((\nu-2)\pi)^{\frac{n}{2}}\Gamma(\frac{\nu}{2})}|K|^{-\frac{1}{2}}\times\Big(1 + \frac{(\bar{y}-\bar{\mu})^T K^{-1}(\bar{y}-\bar{\mu})}{\nu - 2}\Big)^{- \frac{\nu+n}{2}}$$
   
   In general this model assumes that the process density is unimodal and likelihood of a point decreases as the distance to the mode increases. This assumption ensures that the model satisfies the relatively simple dynamical nature of a single potential well. Elliptically symmetric processes have such properties and it is known [@shah_student-t] that the Student-t processes are the largest subset of elliptically symmetric process that have an analytical solution. It is a convenient choice also in the sense that the Gaussian process can be obtained as a special case [@solin_sarkka].
-
-![](student_oup_example_plot.jpg)
-`r figs(name="student_oup_example_plots","Examples of the t-driven OUP. Increasing the degrees of freedom slightly affects the variation. The last graph with df = Inf corresponds to the Gaussian OUP.")`
 
 
 Transition density $X_t|X_0$ of a Gaussian OUP is normally distributed, with mean
@@ -112,6 +121,193 @@ As the location of the stable state and variance can easily be approximated from
 The Stan model below uses a non-centered parameterization that is modelled using the error terms $\epsilon_i$. We also experimented with the centered parameterization but with less accurate results and more divergent transitions. This is in agreement with [@stan_manual, p.145] where it was mentioned that hierarchical models tend to do better with non-centered parameterizations, especially when the sample size is limited.
 
 Shortly the idea of the Stan code is as follows. After declaring the data and parameters in the corresponding blocks, error terms $\epsilon_i$ and latent values $X_i$ are related in the transformed data block. In the model block parameters and conditional densities for the error terms are incremented to the log density and the observations $Y_{ji}$ are sampled from a normal distribution with $X_i$ as the mean and small variance.
+
+Sample size per series and observation intervals can be arbitrary. For simplicity we only use equal amounts of samples and uniform intervals.
+
+```{r}
+  fixed_par_model <- stan_model("fixed_par_original_hierarchical_noncentered.stan")
+```
+
+## Model validation
+
+The model is tested on simulated data generated by the sampling scheme in Lemma 2.2 [@solin_sarkka]: if $\bar{y}|\gamma \sim \mathcal{N}(\mathbf{\mu}, \gamma K)$, where $\gamma$ is inverse gamma distributed $\gamma \sim  \textrm{IG}(\nu/2, (\nu-2)/2)$, then  marginally $\bar{y} \sim \textrm{MTV}_n(\mu, K, \nu).$  The function ```generate_n_series``` returns a list of n series with the given parameter values. 
+
+Through out the simulations we will fix the parameters to the following values, unless otherwise noted. Mean reversion rate $\lambda=0.1$ corresponds to a half-life of about seven units of time so it is reasonable in terms of the time resolution. These values also allow both the deterministic and stochastic aspects to apper and seem to generate time series heuristically similar to real microbiome data.
+
+```{r parameters}
+lambda <- 0.1
+sigma <- 0.1
+mu <- 5
+t.df <- 7
+```
+
+![](example_graph.jpg)
+![](bacteroides_graph.jpg)
+
+### Single series 
+To get an idea how many samples are needed for a reliable inference of a single series we simulate data with varying amounts samples. 
+
+First we generate some single series data with a sample size range 5...100 in increments of 5 and four different values of lambda: 0.1, 0.3, 0.5 and 0.7. 
+
+```{r single_series_data} 
+
+  single_series_set <- list()
+
+  single_series_set <- lapply(c(.1, .3, .5, .7), function(l)
+     lapply(seq(from=5, to=100, by = 5), function(x) {
+    s <- generate_n_series(n = 1, intervals = 1:x, mu=mu, lambda=l, sigma=sigma, fix_mu = 5, fix_kappa_log = log(0.1))
+return(s)
+    }) %>% set_names(seq(from=5, to=100, by = 5)))
+  names(single_series_set) <- as.character(c(.1, .3, .5, .7))
+    
+  
+
+```
+
+Then input these data into stan. 
+
+```{r, eval=FALSE}
+
+  single_series_set_samples <- list()
+  
+  for(i in names(single_series_set)) {
+    single_series_set_samples[[i]] <- lapply(single_series_set[[i]], function(x) sampling(fixed_par_model, x, chains=chains, iter=iter)) %>% set_names(as.character(seq(from=5, to=100, by = 5)))
+  }
+  
+```
+
+Results (mean, 25%, 75% quantiles)
+
+In Figure `r figs("single_series_lambda_0.5",display="num")` below the posterior mean and interquartile ranges are plotted agains length of the series. As expected the estimates converge to the simulation value as sample size increases. 
+
+
+
+```{r single_series_plots}
+  single_series_plots <- lapply(single_series_set_samples, function(x){
+    x %>% samples_df() %>% plot_posteriors(sim_value = lambda, par="Lambda ")
+  }) %>% set_names(c(.1, .3, .5, .7))
+
+
+grid.arrange(single_series_plots[[1]], single_series_plots[[2]], single_series_plots[[3]], single_series_plots[[4]],ncol=2)
+
+```
+
+`r figs(name="single_series_plots","Means and interquartile ranges of the posteriors for lambda against length of the series. Estimates converge to the simulation value at different rates for different values of lamdba.")`
+
+
+### Hierarchical model: two long
+
+```{r two_long_data}
+
+  two_series_set <- lapply(seq(from=5, to=100, by = 5), function(x) {
+    
+    generate_n_series(n=2, intervals=1:x, sigma=sigma, lambda=lambda, mu=mu, t.df = t.df, fix_mu=5, fix_kappa_log=log(0.1)) %>% concatenate_series()
+  })
+  
+  names(two_series_set) <- as.character(seq(from=5, to=100, by = 5))
+
+```
+
+
+Stan 
+```{r two_long_samples}
+
+# two_series_set_samples <- lapply(two_series_set, function(x) sampling(fixed_par_model, x, chains=2, iter=iter))
+names(two_series_set_samples) <- as.character(seq(from=5, to=100, by = 5))
+
+# make data frame for results
+two_series_results <- two_series_set_samples %>% samples_df2()
+
+# plot
+p_two_series_plot <- two_series_results %>% plot_hier_posteriors(sim_value = .5)
+
+print(p_two_series_plot)
+```
+
+
+
+Compare this to model with single series and 100 samples to see if hierarchical structure brings any help. 
+
+
+
+### Hierarchical model: many short series
+Above we saw that a low sample size for a single series generally means poor parameter estimation. Now we try to assess to what extent a hierarchical extension and amount of replicates improves the model's performance.
+
+We simulate data with number of series and observations as follows.
+
+```{r short_series_data}
+  n_series <- c(1, 2, 3, 5, 10, 20)
+  n_observations <- c(5, 10, 20, 40, 80)
+```
+  
+  
+```{r}
+  
+  short_series_set <- list()
+    for(i in n_observations) {
+      series <- lapply(n_series, function(x) generate_n_series(n=x, sigma=sigma, mu=mu, lambda=0.1, t.df=t.df, intervals = 1:i, seed = 1, fix_mu = 5, fix_kappa_log = log(0.1)) %>% concatenate_series()) %>% set_names(as.character(n_series))
+      
+      short_series_set[[as.character(i)]] <- series
+    }
+  
+```
+
+Stan: Sample
+
+```{r short_series_samples, eval = FALSE}
+  short_series_samples <- list()
+  for(i in n_observations) {
+    samples <- list()
+
+    for(j in n_series) {
+        samples[[as.character(j)]] <- sampling(fixed_par_model, short_series_set[[as.character(i)]][[as.character(j)]], chains=chains, iter=iter)
+    }
+
+    short_series_samples[[as.character(i)]] <- samples
+  }
+
+  # save(short_series_samples, file="short_series_samples")
+  # load(file="short_series_samples")
+```
+
+
+Extract results as a data frame and plot the estimates. 
+
+```{r single_series_results, fig.width=12}
+  # results list
+  short_series_results_list <- lapply(n_observations, function(x) samples_df_par2(short_series_samples[[as.character(x)]], par='lambda') %>% mutate(obs=x)) %>% set_names(as.character(n_observations))
+
+  short_series_results_plot <- do.call(rbind, short_series_results_list) %>% ggplot(aes(x=length, y=mean)) + geom_point() + geom_hline(yintercept = .1, linetype="dashed") + facet_grid(cols = vars(obs)) + theme_bw() + labs(y="Posterior mean", x="Number of series")
+
+print(short_series_results_plot)
+```
+
+`r figs(name="single_series_results","Means of the posterior estimates against length of the series. Title of each panel denotes the number of observations per series and dashed line represents the simulation value of lambda.")`
+
+Figure `r figs("single_series_results", display="num")` displays the posterior mean estimates for the lambda. As expected and evident in the previous sections there is improvement in accuracy as series length is increased. However, at least upon visual inspection, additional series affect the estimates very little or not at all. 
+
+
+
+### Diagnostics & Running time
+
+
+
+## Discussion
+The main objective of this work was to extend a previously propsed implementation of the Ornstein-Uhlenbeck driven Student-t process in Stan by adding a new level of hierarchy to the model. By partial pooling, the parameter inference could utilize information across multiple time series. 
+
+
+The tests of robustness executed here provide only preliminary results of the model capabilities. For a complete picture an extensive probing of different parameter ranges and (hyper)priors should be undertaken. Alternative parameterizations should be tested to see if some perform better with different sample sizes. This would allow the analysis of time series with missing values and eliminate the need for interpolation and forcing even observation times, techniques that have traditionally been used in these situations.  
+
+The HIT Chip Atlas data set [@TippingElements], consists of stool samples from 1006 Western individuals with multiple (2-5) time points for 78 subjects, and provides an interesting opporturnity to test the model on real data. This has motivated the work presented here, and we are next planning to apply our validated implementation on this real case study of the human gut microbiome analysis.
+
+\newpage
+
+# Licences 
+Code and text © 2018, Ville Laitinen & Leo Lahti, licensed under CC BY 4.0.
+
+\new page
+
+## Supplementary
 
 ```
 
@@ -214,147 +410,7 @@ Shortly the idea of the Stan code is as follows. After declaring the data and pa
 
 ```
 
-
-## Testing
-
-The model is tested on simulated data generated by the sampling scheme in Lemma 2.2 [@solin_sarkka]: if $\bar{y}|\gamma \sim \mathcal{N}(\mathbf{\mu}, \gamma K)$, where $\gamma$ is inverse gamma distributed $\gamma \sim  \textrm{IG}(\nu/2, (\nu-2)/2)$, then  marginally $\bar{y} \sim \textrm{MTV}_n(\mu, K, \nu).$  The function ```generate_n_series``` returns a list of n series with the given parameter values. 
-
-Through out the simulations we will fix the parameters to the following values, unless otherwise noted. 
-
-```{r parameters}
-lambda <- 0.1
-sigma <- 0.1
-mu <- 5
-t.df <- 7
-```
-
-
-### Single series 
-To get an idea many samples are needed for a reliable inference of a single series we simulate data with varying amounts samples. 
-
-First we generate some single series data with a sample size range 5...100 in increments of 5. 
-
-```{r single_series_data} 
-
-  single_series_set <- lapply(seq(from=5, to=100, by = 5), function(x) {
-    s <- generate_n_series(n = 1, intervals = 1:x, mu=mu, lambda=.5, sigma=sigma)
-    s[["kappa_log"]] <- as.array(log(0.1))
-    s[["mu"]] <- as.array(5)
-    return(s)
-  })
-  names(single_series_set) <- as.character(seq(from=5, to=100, by = 5))
-
-```
-
-Then input these data into stan. 
-
-```{r}
-
-  fixed_par_model <- stan_model("fixed_par_original_hierarchical_noncentered.stan")
-
-  single_series_set_samples <- lapply(single_series_set, function(x) sampling(fixed_par_model, x, chains=2))
-  names(single_series_set_samples) <- as.character(seq(from=5, to=100, by = 5))
-  
-```
-
-Results (mean, 25%, 75% quantiles)
-
-In Figure `r figs("single_series_lambda_0.5",display="num")` below the posterior mean and interquartile ranges are plotted agains length of the series. As expected the estimates converge to the simulation value as sample size increases. 
-
-ADD: single series graphs for other lambda values as well to show that estimates converge faster if lambda small. 
-
-```{r}
-  single_series_lambda_0.5 <- single_series_set_samples %>% samples_df() %>% plot_posteriors(sim_value = .5, par="Lambda ")
-
-```
-
-`r figs(name="single_series_lambda_0.5","Means and interquartile ranges of the posteriors for lambda against length of the series. Estimates converge to the simulation value. ")`
-
-
-### Hierarchical model 
-
-*Two groups ? 
-*Individual estimates
-
-Above we saw that a low sample size for a single series generally means poor parameter estimation. Now we try to assess to what extent a hierarchical extension to this model improves the model's performance.
-
-We simulate dataset with number of series and observations as follows
-
-```{r short_series_data}
-  n_series <- c(1, 2, 3, 5, 10, 20)
-  n_observations <- c(5, 10, 20, 40, 80)
-  
-  # generate data
-  short_series_set <- list()
-    for(i in n_observations) {
-      series <- lapply(n_series, function(x) generate_n_series(n=x, sigma=sigma, mu=mu, lambda=0.1, t.df=t.df, intervals = 1:i, seed = 1, fix_mu = 5, fix_kappa_log = log(0.1)) %>% concatenate_series()) %>% set_names(as.character(n_series))
-      
-      short_series_set[[as.character(i)]] <- series
-  }
-```
-
-
-Stan: Sample
-
-```{r short_series_samples, eval = FALSE}
-
-  sample ----
-  short_series_samples <- list()
-  for(i in n_observations) {
-    samples <- list()
-
-    for(j in n_series) {
-        samples[[as.character(j)]] <- sampling(fixed_par_model, short_series_set[[as.character(i)]][[as.character(j)]], chains=2)
-    }
-
-    short_series_samples[[as.character(i)]] <- samples
-  }
-
-  save(short_series_samples, file="short_series_samples")
-  load(file="short_series_samples")
-    
-  
-```
-
-
-Get results as a data frame and make plots
-
-```{r singe_serires_results}
-  # results list
-  short_series_results <- lapply(n_observations, function(x) samples_df_par2(short_series_samples[[as.character(x)]], par='lambda')) %>% set_names(as.character(n_observations))
-    
-  # plot results
-  short_series_plots <- lapply(as.character(n_observations), function(x) short_series_results[[x]] %>% plot_short_series_posteriors() + labs(title=paste0(x, " observations")))
-```
-
-
-
-Measure performance with mean.  
-
-```{r, message=FALSE, warning=FALSE}
-
-
-
-```
-
-
-### Diagnostics & Running time
-
-
-
-## Discussion
-The main objective of this work was to extend a previously propsed implementation of the Ornstein-Uhlenbeck driven Student-t process in Stan by adding a new level of hierarchy to the model. By partial pooling, the parameter inference could utilize information across multiple time series. In terms of the defined metrics the model performance was satisfactory. The parameter characterizing the stochastic fluctuations, $\kappa$ was an exception, as the precision of estimates decreased as more data was available. 
-
-The tests of robustness executed here provide only preliminary results of the model capabilities. For a complete picture an extensive probing of different parameter ranges and priors should be undertaken. Alternative parameterizations should be tested to see if some perform better with higher sample sizes. As the OU process can be considered an extensions of the autoregressive AR(1) model with arbitrary time intervals, we are planning to develop this work further by enabling the time series to have unequal amounts of observations and unequal measurement times. This would allow the analysis of time series with missing values and eliminate the need for interpolation and forcing even observation times. 
-
-The HIT Chip Atlas data set [@TippingElements], consists of stool samples from 1006 Western individuals with multiple (2-5) time points for 78 subjects, and provides an interesting opporturnity to test the model on real data. This has motivated the work presented here, and we are next planning to apply our validated implementation on this real case study of the human gut microbiome analysis.
-
-\newpage
-
-# Licences 
-Code and text © 2018, Ville Laitinen & Leo Lahti, licensed under CC BY 4.0.
-
-# Bibliography
+## Bibliography
 
 
 

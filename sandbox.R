@@ -72,7 +72,7 @@ fixed_par_original_long_sample <- sampling(fixed_par_model, concatenate_two_seri
 
 #### single series,  data: lambda = 0.5 ----
 single_series_set <- lapply(seq(from=5, to=100, by = 5), function(x) {
-  s <- generate_n_series(n = 1, intervals = 1:x, mu=mu, lambda=lambda, kappa=kappa)
+  s <- generate_n_series(n = 1, intervals = 1:x, mu=mu, lambda=lambda, sigma=sigma)
   s[["kappa_log"]] <- as.array(log(0.1))
   s[["mu"]] <- as.array(5)
   return(s)
@@ -80,11 +80,11 @@ single_series_set <- lapply(seq(from=5, to=100, by = 5), function(x) {
 names(single_series_set) <- as.character(seq(from=5, to=100, by = 5))
 
 # stan samples
-# single_series_set_samples <- lapply(single_series_set, function(x) sampling(fixed_par_model, x, chains=2))
-# names(single_series_set_samples) <- as.character(seq(from=5, to=100, by = 5))
-# 
-# # save 
-# save(single_series_set_samples, file="single_series_set_samples")
+single_series_set_samples <- lapply(single_series_set, function(x) sampling(fixed_par_model, x, chains=2))
+names(single_series_set_samples) <- as.character(seq(from=5, to=100, by = 5))
+
+# save
+save(single_series_set_samples, file="single_series_set_samples")
 
 load(file="single_series_set_samples")
 

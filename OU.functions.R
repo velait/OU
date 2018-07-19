@@ -17,7 +17,7 @@ ou_simulator <- function (T, mu, lambda, kappa, x0 = NULL, seed=1) {
     x[[t]] <- mu - (mu - x[[t-1]]) * exp(-lambda) + rnorm(1) * sqrt(kappa * (1 - exp(-2 * lambda)))
   }
   
-  #gompertz assumptions, poisson model 
+  #gompertz assumptions, poisson meanl 
   list(observations = x, T=T, n_series=1, samples_per_series=as.array(T), time=1:T)
   
   
@@ -97,6 +97,9 @@ generate_n_series <- function(n, kappa=NULL, sigma=NULL, lambda, mu, intervals, 
     
   }
   
+  if(length(s_list) == 1) {
+    return(s_list[[1]])
+  }
   s_list
   
 }
@@ -256,17 +259,17 @@ success_rate_quantiles <- function(stan_fit, parameter="lambda", real_value=1, s
 
 
 
-# Get df with lenght, mode and 50% intervals 
+# Get df with lenght, mean and 50% intervals 
 samples_df <- function(sample_list) {
   res_df <- matrix(NA, length(sample_list), 4)
   
-  colnames(res_df) <- c("length", "lower25", "mode", "upper75")
+  colnames(res_df) <- c("length", "lower25", "mean", "upper75")
   
   j <- 1
   for(i in sample_list) {
     res <- summary(i)$summary[grep("lambda\\[", rownames(summary(i)$summary)),c("25%", "50%", "75%")]
     
-    res_df[j, c("lower25", "mode", "upper75")] <- res
+    res_df[j, c("lower25", "mean", "upper75")] <- res
     j <- j + 1
   }
   
@@ -276,19 +279,42 @@ samples_df <- function(sample_list) {
   res_df
 }
 
+samples_df2 <- function(sample_list) {
+  
+  # make data frame for results
+  res_df <- matrix(NA, 2*length(sample_list), 5) %>% set_colnames(c("Series", "Observations", "lower25", "mean", "upper75"))
+  
+  
+  j <- 1
+  for(i in sample_list) {
+    res <- summary(i)$summary[grep("lambda\\[", rownames(summary(i)$summary)),c("25%", "50%", "75%")]
+    
+    res_df[c(j, j+1), c("lower25", "mean", "upper75")] <- res
+    j <- j + 2
+  }
+  
+  
+  res_df[, "Observations"] <- rep(as.numeric(names(sample_list)), each=2)
+  res_df <- res_df %>% as.data.frame()
+  res_df[, "Series"] <- rep(c("A","B"), length(sample_list))
+  
+  res_df
+}
+
 # plot the posterior intervals
 plot_posteriors <- function(res_df, sim_value, par) {
-  p <- ggplot(res_df, aes(x=length, y=mode)) + 
+  p <- ggplot(res_df, aes(x=length, y=mean)) + 
     geom_errorbar(aes(ymin=lower25, ymax=upper75), width=1) +
     geom_line() +
-    geom_point() + geom_hline(yintercept = sim_value, linetype="dashed") + labs(y="Estimate", x="Length", title=paste0(par ,"estimates with 50% error bars vs. series length"), subtitle=paste0("Simulation value lambda = ", sim_value)) + theme_bw() + scale_y_continuous(limits = c(0, 6.5))
+    geom_point() + geom_hline(yintercept = sim_value, linetype="dashed") + labs(y="Estimate", x="Length") + theme_bw() 
+  # + scale_y_continuous(limits = c(0, 6.5))
   
   p
 } 
 
 # hierarchial plotter
 plot_hier_posteriors <- function(res_df, sim_value) {
-  p <- ggplot(res_df, aes(x=length, y=mode, group=group, color=group)) + 
+  p <- ggplot(res_df, aes(x=Observations, y=mean, group=Series, color=Series)) + 
     geom_errorbar(aes(ymin=lower25, ymax=upper75), width=1) +
     geom_line() +
     geom_point()  + geom_hline(yintercept = sim_value, linetype="dashed", color="black") + labs(y="Estimate", x="Length", title="Lambda estimates with 50% error bars vs. series length") + theme_bw() + scale_color_manual(values=c("#f1a340", "#998ec3")) + scale_y_continuous(limits = c(0, max(res_df$upper)))
@@ -303,13 +329,13 @@ samples_df_par <- function(sample_list, par) {
   
   res_df <- matrix(NA, length(sample_list), 4)
   
-  colnames(res_df) <- c("length", "lower25", "mode", "upper75")
+  colnames(res_df) <- c("length", "lower25", "mean", "upper75")
   
   j <- 1
   for(i in sample_list) {
     res <- summary(i)$summary[par,c("25%", "50%", "75%")]
     
-    res_df[j, c("lower25", "mode", "upper75")] <- res
+    res_df[j, c("lower25", "mean", "upper75")] <- res
     j <- j + 1
   }
   
@@ -320,15 +346,11 @@ samples_df_par <- function(sample_list, par) {
   
 }
 
-sample_list <-short_series_samples[[1]]
-par <- "lambda"
-
-
 samples_df_par2 <- function(sample_list, par) {
   
   res_df <- matrix(NA, 1, 4)
   
-  colnames(res_df) <- c("length", "lower25", "mode", "upper75")
+  colnames(res_df) <- c("length", "lower25", "mean", "upper75")
   
 
   for(i in sample_list) {
@@ -381,14 +403,15 @@ generate_a_sigma_series <- function(kappa,
 }
 
 
-res_df <- short_series_result_list[[1]]
+
 
 
 # get plots form short series results
 plot_short_series_posteriors <- function(res_df) {
   
   breaks <- res_df$length %>% unique()
-  p <- ggplot(res_df, aes(x=length, y=mode)) + geom_point() + theme_bw() + labs(y="Posterior mean",x="Number of series" ) + scale_x_continuous(breaks = breaks)
+
+  p <- ggplot(res_df, aes(x=length, y=mean)) + geom_point() + theme_bw() + labs(y="Posterior mean",x="Number of series" ) + scale_x_continuous(breaks = breaks)
   
   p
 }
