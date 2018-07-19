@@ -81,12 +81,20 @@ generate_a_series <- function(kappa=NULL, sigma=NULL, lambda, mu, intervals, t.d
   out.data
 }
 
-generate_n_series <- function(n, kappa=NULL, sigma=NULL, lambda, mu, intervals, t.df = Inf, seed = 1) {
+generate_n_series <- function(n, kappa=NULL, sigma=NULL, lambda, mu, intervals, t.df = Inf, seed = 1, fix_mu=NULL, fix_kappa_log=NULL) {
   
   s_list <- list()
   
   for(i in 1:n) {
-    slist[[i]] <- generate_a_series(kappa=NULL, sigma=NULL, lambda, mu, intervals, t.df = Inf, seed = seed + i)
+    s_list[[i]] <- generate_a_series(kappa=kappa, sigma=sigma, lambda=lambda, mu=mu, intervals=intervals, t.df = t.df, seed = seed + i)
+    
+    if(!is.null(fix_mu)) {
+      s_list[[i]][["mu"]] <- as.array(fix_mu)
+    }
+    if(!is.null(fix_kappa_log)) {
+      s_list[[i]][["kappa_log"]] <- as.array(fix_kappa_log)
+    }
+    
   }
   
   s_list
@@ -183,6 +191,12 @@ generate_data_set <- function(kappa=0.1, lambda=0.5, mu=5, intervals, n_series,
 # concatenate series
 concatenate_series <- function(s_list) {
   
+  len <- length(s_list)
+  
+  if(len == 1) {
+    return(s_list[[1]])
+  }
+  
   obs <- c()
   t <- c()
   s <- c()
@@ -190,15 +204,15 @@ concatenate_series <- function(s_list) {
     obs <- c(obs, s_list[[i]][["observations"]])
     t <- c(t, s_list[[i]][["time"]])
     s <- c(s, s_list[[i]][["samples_per_series"]])
-    kappa_log <- c(s_list[[1]][["kappa_log"]], s_list[[2]][["kappa_log"]])
-    mu=c(s_list[[1]][["mu"]], s_list[[2]][["mu"]])
-    
   }
   
-  T <- length(obs)
-  n <- length(s_list)
+  kappa_log <- rep(s_list[[1]][["kappa_log"]], len)
+  mu <- rep(s_list[[1]][["mu"]], len)
   
-list(observations=obs, time=t, n_series=n, samples_per_series=s, T=T, kappa_log=kappa_log, mu=mu)
+  T <- length(obs)
+  
+  
+list(observations=obs, time=t, n_series=len, samples_per_series=s, T=T, kappa_log=kappa_log, mu=mu)
   
 }
 
@@ -306,6 +320,37 @@ samples_df_par <- function(sample_list, par) {
   
 }
 
+sample_list <-short_series_samples[[1]]
+par <- "lambda"
+
+
+samples_df_par2 <- function(sample_list, par) {
+  
+  res_df <- matrix(NA, 1, 4)
+  
+  colnames(res_df) <- c("length", "lower25", "mode", "upper75")
+  
+
+  for(i in sample_list) {
+    
+    s <- summary(i)$summary
+    
+    res <- s[grepl(paste0(par, "\\["), rownames(s)),c("25%", "50%", "75%")]
+    
+    if(class(res) == "numeric") {
+      res_df <- res_df %>% rbind(c(1, res))
+    } else {
+      res_df <- res_df %>% rbind(cbind(nrow(res), res))
+    }
+   
+  }
+  
+  res_df <- res_df[-1,]
+  res_df <- res_df %>% as_tibble()
+  
+  res_df
+  
+}
 
 
 
@@ -333,4 +378,17 @@ generate_a_sigma_series <- function(kappa,
   out.data$samples_per_series <- array(length(intervals))
   out.data$T <- length(intervals)
   out.data
+}
+
+
+res_df <- short_series_result_list[[1]]
+
+
+# get plots form short series results
+plot_short_series_posteriors <- function(res_df) {
+  
+  breaks <- res_df$length %>% unique()
+  p <- ggplot(res_df, aes(x=length, y=mode)) + geom_point() + theme_bw() + labs(y="Posterior mean",x="Number of series" ) + scale_x_continuous(breaks = breaks)
+  
+  p
 }
