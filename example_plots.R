@@ -16,6 +16,16 @@ oup_example_plot <- sapply(c(0.01, 0.1, 1), function(x) generate_a_series(sigma 
 oup_example_plot2 <- sapply(c(0.05, 0.1, 0.2), function(x) generate_a_series(sigma = x, lambda = lambda, mu = mu, intervals = 1:200, t.df=Inf, seed = 1)[["observations"]]) %>% as_tibble() %>% set_colnames(c("sigma = 0.05", "sigma = 0.1", "sigma = 0.2")) %>%  mutate(time=1:200) %>% melt(id.vars="time") %>% ggplot(aes(x=time, y=value, color=variable)) + geom_line() + theme_bw() + labs(x="Time", y="Value", title="mu = 5, lambda = 0.1") +  scale_color_manual(values=c('#4daf4a','#377eb8', '#e41a1c')) + theme(legend.title=element_blank())
 
 
+jpeg("example_graph.jpg", width = 750, height = 300)
+sapply(c(0.1), function(x) generate_a_series(sigma = sigma, lambda = x, mu = 4.5, intervals = 1:182, t.df=Inf, seed = 1)[["observations"]]) %>% as_tibble() %>% set_colnames("Value") %>%  mutate(Time=1:182) %>% ggplot(aes(x=Time, y=Value)) + geom_line() + scale_y_continuous(limits=c(3, 6)) +  theme_bw() + labs(x="Time", y="Value") 
+dev.off()
+
+jpeg("bacteroides_graph.jpg", width = 750, height = 300)
+abn %>% ggplot(aes(x=time, y=value)) + geom_line() + scale_y_continuous(limits=c(3, 6)) +  theme_bw() + labs(x="Time", y="Value") 
+dev.off()
+
+
+
 # three in row panel
 # oup_example_plot <- sapply(c(0.01, 0.1, 1), function(x) generate_a_series(sigma = 0.1, lambda = x, mu = mu, intervals = 1:200, t.df=Inf, seed = 1)[["observations"]]) %>% as_tibble() %>% set_colnames(c("lambda = 0.01", "lambda = 0.1", "lambda = 1")) %>%  mutate(time=1:200) %>% melt(id.vars="time") %>% ggplot(aes(x=time, y=value)) + geom_line() + scale_y_continuous(limits = c(2.5, 7.5)) + facet_grid(cols = vars(variable)) + theme_bw() + theme(legend.position="none") + labs(x="Time", y="Value", title="mu = 5, sigma = 0.1")
 
@@ -40,3 +50,6 @@ student_oup_example_plot <- sapply(c(3, 7, Inf), function(x) generate_a_series(s
 jpeg("student_oup_example_plot.jpg", width = 750, height = 300)
 student_oup_example_plot
 dev.off()
+
+
+

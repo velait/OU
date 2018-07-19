@@ -260,24 +260,24 @@ success_rate_quantiles <- function(stan_fit, parameter="lambda", real_value=1, s
 
 
 # Get df with lenght, mean and 50% intervals 
-samples_df <- function(sample_list) {
-  res_df <- matrix(NA, length(sample_list), 4)
-  
-  colnames(res_df) <- c("length", "lower25", "mean", "upper75")
-  
-  j <- 1
-  for(i in sample_list) {
-    res <- summary(i)$summary[grep("lambda\\[", rownames(summary(i)$summary)),c("25%", "50%", "75%")]
-    
-    res_df[j, c("lower25", "mean", "upper75")] <- res
-    j <- j + 1
-  }
-  
-  res_df[, "length"] <- as.numeric(names(sample_list))
-  res_df <- res_df %>% as.data.frame()
-  
-  res_df
-}
+# samples_df <- function(sample_list) {
+#   res_df <- matrix(NA, length(sample_list), 4)
+#   
+#   colnames(res_df) <- c("Observations", "lower25", "mean", "upper75")
+#   
+#   j <- 1
+#   for(i in sample_list) {
+#     res <- summary(i)$summary[grep("lambda\\[", rownames(summary(i)$summary)),c("25%", "50%", "75%")]
+#     
+#     res_df[j, c("lower25", "mean", "upper75")] <- res
+#     j <- j + 1
+#   }
+#   
+#   res_df[, "Observations"] <- as.numeric(names(sample_list))
+#   res_df <- res_df %>% as.data.frame()
+#   
+#   res_df
+# }
 
 samples_df2 <- function(sample_list) {
   
@@ -303,7 +303,7 @@ samples_df2 <- function(sample_list) {
 
 # plot the posterior intervals
 plot_posteriors <- function(res_df, sim_value, par) {
-  p <- ggplot(res_df, aes(x=length, y=mean)) + 
+  p <- ggplot(res_df, aes(x=Observations, y=mean)) + 
     geom_errorbar(aes(ymin=lower25, ymax=upper75), width=1) +
     geom_line() +
     geom_point() + geom_hline(yintercept = sim_value, linetype="dashed") + labs(y="Estimate", x="Length") + theme_bw() 

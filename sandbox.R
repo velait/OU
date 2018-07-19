@@ -22,9 +22,9 @@ fixed_par_model <- stan_model("fixed_par_original_hierarchical_noncentered.stan"
 #### data ####
 #model parameters
 kappa <- 0.1
-lambda <- .5
+lambda <- 0.1
 mu <- 5
-t.df <- 5
+t.df <- 7
 intervals <- 1:100
 
 # data with different variable names
@@ -80,11 +80,11 @@ single_series_set <- lapply(seq(from=5, to=100, by = 5), function(x) {
 names(single_series_set) <- as.character(seq(from=5, to=100, by = 5))
 
 # stan samples
-single_series_set_samples <- lapply(single_series_set, function(x) sampling(fixed_par_model, x, chains=2))
-names(single_series_set_samples) <- as.character(seq(from=5, to=100, by = 5))
-
-# save
-save(single_series_set_samples, file="single_series_set_samples")
+# single_series_set_samples <- lapply(single_series_set, function(x) sampling(fixed_par_model, x, chains=2))
+# names(single_series_set_samples) <- as.character(seq(from=5, to=100, by = 5))
+# 
+# # save
+# save(single_series_set_samples, file="single_series_set_samples")
 
 load(file="single_series_set_samples")
 
@@ -430,3 +430,33 @@ sigma_list <- concatenate_series(lapply(1:5, function(i) generate_a_sigma_series
 
 sigma_hier_samples <- sampling(original_hierarchical_model_OU, sigma_list, chains=chains, iter=2000)
 
+
+
+#### sampling times ####
+
+
+
+# get times form fit list
+running_times <- list()
+
+for(i in names(short_series_samples)) {
+  t_temp <- list()
+  for(j in names(short_series_samples[[i]])) {
+    t_temp[[j]] <-  sapply(short_series_samples[[i]][[j]]@sim[[1]],function(x) attr(x, "elapsed_time" )) %>% sum
+  }
+  running_times[[i]] <- t_temp
+}
+
+# make data frame
+for(i in names(running_times)) {
+  running_times[[i]] <- unlist(running_times[[i]]) %>% as_tibble() %>% mutate(n_series = names(running_times[[i]]), n_obs = i)
+}
+running_times <- do.call(rbind, running_times) %>% as_tibble
+
+running_times$n_obs <- factor(running_times$n_obs, levels = as.character(c(5, 10, 20, 40, 80)))
+running_times$n_series <- factor(running_times$n_series, levels=unique(running_times$n_series))
+
+
+# plot
+
+running_times_plot <- running_times %>% ggplot(aes(x=n_series, y=(value)/60, color=n_obs)) + geom_point() + labs(y="Minutes", x="Number of series") + guides(color=guide_legend(title="Observations")) + theme_bw()
