@@ -2,9 +2,13 @@
 title: "A Hierarchical extension to Ornstein-Uhlenbeck-type Student's t-processes"
 author: |
   | Ville Laitinen & Leo Lahti 
-  | University of Turku
+  | University of Turku, Finland
   | velait@utu.fi
+<<<<<<< HEAD
 date: "r Sys.Date()"
+=======
+date: "July 20, 2018"
+>>>>>>> 0a5c957f3fcec01b0665fd9d73ecf472954b7b10
 header-includes:
 
 output:
