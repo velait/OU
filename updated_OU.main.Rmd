@@ -53,7 +53,7 @@ load("OU_fit_list")
 The aim of this work is to provide a hierarchical extension of the Ornstein-Uhlenbeck type processes, in order to aggregate information across multiple (short) time series. This extends the recent Stan implementation [@Goodman2018], where parameter estimates of a Student-t type OU process are obtained based on a single (long) time series. We have added a level of hierarchy, which allows inference of the model parameters based on multiple time series.
 We validate the implementation and investigate its robustness to variations in sample size and time series lengths  based on simulated data. 
 
-Motivation for this work comes from the analysis of human gut microbiome dynamics. It has been reported that on average the abundance of many gut bacteria remains relatively stable over long time periods [@david_host_2014]. On a shorter (daily) time scale these abundances do however have considerable fluctuations. A number of cross-sectional studies of the human microbiome have characterized the diversity and variation of the gut microbiome between individuals [e.g. @hmp_huttenhower; @Qin2009]. The temporal variation of different taxonomic units within individuals is, however, less well understood [@faust_metagenomics_2015]. One of the current challenges is that the currently available time series are often short, sparse and noisy, and robust inference of dynamical models can be challenging in such case. Some of these limitations can be addressed by adding a level of hierarchy to the model in order to aggregate information across multiple time series. In addition, such extensions can potentially help to analyze the individuality of the time series from different study subjects.
+Motivation for this work comes from the analysis of human gut microbiome dynamics. It has been reported that on average the abundance of many gut bacteria remains relatively stable over long time periods [@david_host_2014]. On a shorter (daily) time scale these abundances do however have considerable fluctuations. A number of cross-sectional studies of the human microbiome have characterized the diversity and variation of the gut microbiome between individuals [e.g. @hmp_huttenhower; @Qin2009]. The temporal variation of different taxonomic units within individuals and meta data groups is, however, less well understood [@faust_metagenomics_2015]. One of the current challenges is that the currently available time series are often short, sparse and noisy, and robust inference of dynamical models can be challenging in such case. Some of these limitations can be addressed by adding a level of hierarchy to the model in order to aggregate information across multiple time series. In addition, such extensions can potentially help to analyze the individuality of the time series from different study subjects.
 
 Moreover, given the complex and highly individual nature of the gut ecosystem, exact dynamical models of the underlying system are missing. The OU-type processes provide means to characterize key properties of system dynamics, such as the location and resilience of the potential wells, in a non-parametric manner, when knowledge on the data-generating mechanisms is missing.  Therefore, variants of the OU process appear to provide rigorous and justified methods for modeling these dynamics. However, apart from [@Goodman2018] we are not aware of applications of these models, in particular its hierarchical extensions that we develop here, in the context of human microbiome studies. The methodology itself is very generic, and its potential applications naturally reach beyond population dynamics.
 
@@ -63,21 +63,24 @@ Moreover, given the complex and highly individual nature of the gut ecosystem, e
 The Ornstein-Uhlenbeck process (OUP), also known as the Langevin equation in physics and Vasicek model in finance, is a stochastic process with a wide range of applications [@Iacus_SDE]. It can be used to model systems with a steady state that recover from perturbations by returning to the long term mean. The OUP is defined by the stochastic differential equation $$dX_t = \lambda (\mu - X_t)dt + \sigma dZ_t,$$
 where $X_t$ is the state of the system at time t and $Z$ a stochastic process. Unlike with an ordinary differential equation, the solutions of the stochastic counterpart are nowhere differentiable and non-unique as they are different for different realizations of the noise term. Averaging over these solutions recovers the deterministic solution.
 
-The first term on the right hand side ("drift") describes the deterministic behavior and the second term ("dispersion") characterises the stochasticity of the system. The parameters have natural interpretations as mean-reversion rate ($\lambda$), mean ($\mu$) and scale of stochastic fluctuations ($\sigma$). 
+The first term on the right hand side ("drift") describes the deterministic behavior and the second term ("dispersion") characterises the stochasticity of the system. The parameters have natural interpretations as mean-reversion rate ($\lambda$), mean ($\mu$) and scale of stochastic fluctuations ($\sigma$). There is a connection between $\lambda$ and the expect half life of a perturbation: $T_{1/2} = \frac{\log2}{\lambda}$.
 
-![A larger \lambda increase the mean-reversion rate. Stochasticity decreases with a smaller \sigma.](oup_example_plot.jpg)
+![](oup_example_plot.jpg)
 ![](oup_example_plot2.jpg)
 
-`r figs(name="mu_plots1","Proportion of successful mu estimates against number of time points. Different colors denote number of series. HPDI based rates on the left.")`
+`r figs(name="oup_example_plots","A larger lambda value increase the mean-reversion rate. Stochasticity decreases with a smaller sigma.")`
 
-Usually the stochastic process is modeled as white noise but for practical purposes requiring $Z_t$ to be Brownian motion with Gaussian transition density is often too a limiting assumption as it does not allow large enough fluctuations and thus is not robust against outliers [@solin_sarkka]. A more general choice is to use the Student-*t* process that allows greater variance between consecutive points. The process $f$ is a Student-t process, $f \sim \mathcal{ST}(\nu, \mu, K),$ with $\nu$ degrees of freedom, mean paramter $\mu$ and covariance kernel $K$,if any finite set of values is multivariate Student-*t* distributed. A  vector $\bar{y} \in \mathbb{R}^n$ is multivariate Student-t distributed, $\bar{y} \sim \mathcal{ST}_n(\nu, \mu, K)$ if it has density
+Usually the stochastic process is modeled as white noise but for practical purposes requiring $Z_t$ to be Brownian motion with Gaussian transition density is often too a limiting assumption as it does not allow large enough fluctuations and thus is not robust against outliers [@solin_sarkka]. A more general choice is to use the Student-*t* process that allows greater variance between consecutive points. The process $f$ is a Student-t process, $f \sim \mathcal{ST}(\nu, \mu, K),$ with $\nu$ degrees of freedom, mean paramter $\mu$ and covariance kernel $K$, if any finite set of values is multivariate Student-*t* distributed. A  vector $\bar{y} \in \mathbb{R}^n$ is multivariate Student-t distributed, $\bar{y} \sim \mathcal{ST}_n(\nu, \mu, K)$ if it has density
 $$p(\bar{y}) = \frac{\Gamma(\frac{\nu + n}{2})}{((\nu-2)\pi)^{\frac{n}{2}}\Gamma(\frac{\nu}{2})}|K|^{-\frac{1}{2}}\times\Big(1 + \frac{(\bar{y}-\bar{\mu})^T K^{-1}(\bar{y}-\bar{\mu})}{\nu - 2}\Big)^{- \frac{\nu+n}{2}}$$
   
   In general this model assumes that the process density is unimodal and likelihood of a point decreases as the distance to the mode increases. This assumption ensures that the model satisfies the relatively simple dynamical nature of a single potential well. Elliptically symmetric processes have such properties and it is known [@shah_student-t] that the Student-t processes are the largest subset of elliptically symmetric process that have an analytical solution. It is a convenient choice also in the sense that the Gaussian process can be obtained as a special case [@solin_sarkka].
 
+![](student_oup_example_plot.jpg)
+`r figs(name="student_oup_example_plots","Examples of the t-driven OUP. Increasing the degrees of freedom slightly affects the variation. The last graph with df = Inf corresponds to the Gaussian OUP.")`
+
+
 Transition density $X_t|X_0$ of a Gaussian OUP is normally distributed, with mean
-$\mu - (\mu - X_0)e^{-\lambda t}$ and variance $\kappa(1-e^{-2\lambda t}).$ 
-  From these expressions it's easy to obtain the long term mean, $\mu$, and variance, $\kappa$, as $t \to \infty$. Covariance between two time points is given by
+$\mu - (\mu - X_0)e^{-\lambda t}$ and variance $\kappa(1-e^{-2\lambda t}).$ From these expressions it's easy to obtain the long term mean, $\mu$, and variance, $\sigma$, as $t \to \infty$. Covariance between two time points is given by
 $$\textrm{Cov}[X_t, X_{t+\Delta t}]= \frac{\sigma^2}{\lambda} e^{-\lambda\Delta t}.$$
 
 Now let us recall that if $X \sim \mathcal{N}(\mu, \sigma^2),$ then the random variable $X + \epsilon \sigma$, where $\epsilon \sim \mathcal{N}(0,1)$ is Student-t distributed with $\nu=1$ degrees of freedom. Thus we get an expression relating the error terms $\epsilon_i$ and process values $X_i$ at times $t_i$ and $t_{i-1}$, $\Delta t=t_i-t_{i-1}$:
@@ -95,165 +98,233 @@ We will use this expression in the Stan code model block to increment the log de
 
 
 #### Hierarchical extension
-The model outlined above essentially described the Ornstein-Uhlenbeck driven t-process as implemented in [@Goodman2018]. The novel contribution to this work that  we present now is in equipping the model with hierarchical structure and testing the robustness of the extended implementation. Let $\mathcal{X} = \{\bar{X_j}, j \in \{1, \ldots, N\}\}$ be a set of latent values, with $n_j$ observations in each, each $j$ respresenting e.g. a different measurement site. We assume a hierarchical structure for the parameters $\lambda, \mu$ and $\kappa$,
+The model outlined above essentially described the Ornstein-Uhlenbeck driven t-process as implemented in [@Goodman2018]. The novel contribution to this work that we present now is in equipping the model with hierarchical structure and testing the robustness of the extended implementation. Let $\mathcal{X} = \{\bar{X_j}, j \in \{1, \ldots, N\}\}$ be a set of OUP values, with $n_j$ observations in each, each $j$ respresenting e.g. a different measurement site. We assume a hierarchical structure for the parameters $\lambda, \mu$ and $\sigma$,
 $$dX_{i,t} = \lambda_i (\mu_i - X_{i,t})dt + \sigma_idZ_t,$$
 for all $i \in \{i, \ldots, N\}$.
 
 
 ## The model
 
-In [@Goodman2018] the observations were assumed to be generated by a Poisson process with a rate parameter that the Ornstein-Uhlenbeck process is transformed into via  exponentiation. This so called stochastic Gompertz model is used in ecological time-series analysis [@dennis_2014] where our motivation also lies. However, for a more general and simplified treatment of the OUP we have abandonded this assumption and assume our observations to be directly of the OUP. This will hopefully improve the stability of the sampling as well. 
+In [@Goodman2018] the observations were assumed to be generated by a Poisson process with a rate parameter to which the Ornstein-Uhlenbeck process is transformed into via  exponentiation. This so called stochastic Gompertz model is used in ecological time-series analysis [@dennis_2014] where our motivation also lies. However, for a more general and simplified treatment of the OUP we have abandonded this assumption and assume our observations to be directly of the OUP. This will hopefully improve the stability of the sampling as well. 
 
 As the location of the stable state and variance can easily be approximated from the data by simply computing the mean and variance we input these values to the model and focus solely on the mean-reversion parameter $\lambda$. 
 
-The Stan code uses a non-centered parameterization that is modelled using the error terms $\epsilon_i$. We also experimented with the centered parameterization but with less accurate results and more divergent transitions. This is in agreement with [@stan_manual, p.145] where it was mentioned that hierarchical models tend to do better with non-centered parameterizations, especially when the sample size is limited.
+The Stan model below uses a non-centered parameterization that is modelled using the error terms $\epsilon_i$. We also experimented with the centered parameterization but with less accurate results and more divergent transitions. This is in agreement with [@stan_manual, p.145] where it was mentioned that hierarchical models tend to do better with non-centered parameterizations, especially when the sample size is limited.
 
-Shortly the idea of the Stan code is as follows. After declaring the data and parameters in the corresponding blocks, error terms $\epsilon_i$ and latent values $X_i$ are related in the transformed data block. In the model block parameters and conditional densities for the error terms are incremented to the log density and the observations $Y_{ji}$ are sampled from a Poisson distribution with $X_i$ as the rate.
-
+Shortly the idea of the Stan code is as follows. After declaring the data and parameters in the corresponding blocks, error terms $\epsilon_i$ and latent values $X_i$ are related in the transformed data block. In the model block parameters and conditional densities for the error terms are incremented to the log density and the observations $Y_{ji}$ are sampled from a normal distribution with $X_i$ as the mean and small variance.
 
 ```
 
-data{
-  int <lower=0> T;               // total number of samples
-  int <lower=0> n_series;        // number of series
-  int <lower=0> samples_per_series[n_series]; 
-  real <lower=0> observations[T]; // observation concatenated
-  vector [T] time;               // observation times concatenated
-  
-  vector[n_series] kappa_log;
-  vector[n_series] mu;
-}
-transformed data{
-  
-  vector[T] observation_vec = to_vector(observations);
-  vector[T] time_vec = to_vector(time);
-  
-  int sample_start[n_series];
-  sample_start[1] = 1;
-  if(n_series > 1) {
-    for(i in 2:n_series)
-      sample_start[i] = sample_start[i-1] + samples_per_series[i-1];
+  data{
+    int <lower=0> T;                             // total number of samples
+    int <lower=0> n_series;                      // number of series
+    int <lower=0> samples_per_series[n_series];  // number of samples in each series
+    real <lower=0> observations[T];              // observation concatenated
+    vector [T] time;                             // observation times concatenated
+    
+    vector[n_series] kappa_log;                  // input log(kappa) and mu
+    vector[n_series] mu;
+  }
+  transformed data{
+    
+    vector[T] observation_vec = to_vector(observations);
+    vector[T] time_vec = to_vector(time);
+    
+    int sample_start[n_series];
+    sample_start[1] = 1;
+    if(n_series > 1) {
+      for(i in 2:n_series)
+        sample_start[i] = sample_start[i-1] + samples_per_series[i-1];
+    }
+    
   }
   
-
+  parameters{
+    vector[n_series] lambda_log;
+    real <lower=2> student_df;
+    vector[T] epsilon; // t-process 
+  }
   
-}
-
-parameters{
-  vector[n_series] lambda_log;
-  real <lower=2> student_df;
-  vector[T] epsilon; // t-process 
-}
-
-transformed parameters{
-  vector[n_series] sigma_log = 0.5*(kappa_log + lambda_log + log2());
-  vector[n_series] sigma = exp(sigma_log);
-  vector[n_series] lambda = exp(lambda_log);
-  vector[n_series] kappa = exp(kappa_log);
-  vector[n_series] kappa_inv = exp(-kappa_log);
-  vector[n_series] kappa_sqrt = exp(0.5*kappa_log);
-  vector[T] latent_observation;
-  
-  // For each raw latent observation, transform it using the
-  // conditional expression for the OU process.
-  for(i in 1:n_series){
+  transformed parameters{
+    vector[n_series] sigma_log = 0.5*(kappa_log + lambda_log + log2());
+    vector[n_series] sigma = exp(sigma_log);
+    vector[n_series] lambda = exp(lambda_log);
+    vector[n_series] kappa = exp(kappa_log);
+    vector[n_series] kappa_inv = exp(-kappa_log);
+    vector[n_series] kappa_sqrt = exp(0.5*kappa_log);
+    vector[T] latent_observation;
     
-    int n = samples_per_series[i];
-    int offset = sample_start[i];
-    vector [n-1] time_diff = segment(time_vec, offset + 1, n - 1) -
-      segment(time_vec,offset,n-1);
-    real cum_squares = 0;
-    real last_t = -1;
-    real lv;
-    for(k in 0:n-1){
-      real lv_raw = epsilon[offset + k];
-      if(k == 0){
-        //For the first latent observation use the stationary distribution.
-        lv = mu[i] + lv_raw * kappa_sqrt[i];
-      }else{
-        real t = time_diff[k];
-        real exp_neg_lambda_t = exp(-t*lambda[i]);
-        real sd_scale = kappa_sqrt[i] .* sqrt(1-square(exp_neg_lambda_t));
-        lv = mu[i] - (mu[i] - lv) .* exp_neg_lambda_t + lv_raw .* sd_scale;
-        last_t = t;
+    // For each raw latent observation, transform it using the
+    // conditional expression for the OU process.
+    for(i in 1:n_series){
+      
+      int n = samples_per_series[i];
+      int offset = sample_start[i];
+      vector [n-1] time_diff = segment(time_vec, offset + 1, n - 1) -
+        segment(time_vec,offset,n-1);
+      real cum_squares = 0;
+      real last_t = -1;
+      real lv;
+      for(k in 0:n-1){
+        real lv_raw = epsilon[offset + k];
+        if(k == 0){
+          //For the first latent observation use the stationary distribution.
+          lv = mu[i] + lv_raw * kappa_sqrt[i];
+        }else{
+          real t = time_diff[k];
+          real exp_neg_lambda_t = exp(-t*lambda[i]);
+          real sd_scale = kappa_sqrt[i] .* sqrt(1-square(exp_neg_lambda_t));
+          lv = mu[i] - (mu[i] - lv) .* exp_neg_lambda_t + lv_raw .* sd_scale;
+          last_t = t;
+        }
+        latent_observation[offset+k] = lv;
       }
-      latent_observation[offset+k] = lv;
+      
+    }
+  }
+  model {
+    
+    target += sum(lambda_log);
+    target += sum(kappa_log);
+    
+    
+    // Increment the log probability according to the conditional expression for
+    // the unit multivariate t-distribution.
+    for(i in 1:n_series){
+      int n = samples_per_series[i];
+      int offset = sample_start[i];
+      vector[n] sq_lv = square(epsilon[offset:(offset + n - 1)]);
+      vector[n] cum_squares = cumulative_sum(append_row(0,sq_lv[1:n-1]));    
+      for(k in 1:samples_per_series[i]){
+        target +=  (lgamma((student_df + k) * 0.5) - lgamma((student_df+ k - 1 )* 0.5));     
+        target += -0.5 * (student_df + k) * log1p(sq_lv[k] / (student_df + cum_squares[k] - 2));
+        target += -0.5 * log(student_df + cum_squares[k] - 2);
+      }
+      
     }
     
-  }
-}
-model {
-  
-  target += sum(lambda_log);
-  target += sum(kappa_log);
-  
-  
-  // Increment the log probability according to the conditional expression for
-  // the unit multivariate t-distribution.
-  for(i in 1:n_series){
-    int n = samples_per_series[i];
-    int offset = sample_start[i];
-    vector[n] sq_lv = square(epsilon[offset:(offset + n - 1)]);
-    vector[n] cum_squares = cumulative_sum(append_row(0,sq_lv[1:n-1]));    
-    for(k in 1:samples_per_series[i]){
-      target +=  (lgamma((student_df + k) * 0.5) - lgamma((student_df+ k - 1 )* 0.5));     
-      target += -0.5 * (student_df + k) * log1p(sq_lv[k] / (student_df + cum_squares[k] - 2));
-      target += -0.5 * log(student_df + cum_squares[k] - 2);
-    }
+    // Add the log probability for the observations given the latent observations
+    observations ~ normal(latent_observation, 0.01);
     
+    
+    // Priors
+    lambda ~ normal(0,5);
+    student_df ~ gamma(2,.1);
   }
-  
-  // Add the log probability for the observations given the latent observations
-  observations ~ normal(latent_observation, 0.01);
-  
-  
-  // Priors
-  lambda ~ normal(0,5);
-  student_df ~ gamma(2,.1);
-}
 
 ```
 
 
 ## Testing
 
-The model is tested on simulated data generated by the sampling scheme in Lemma 2.2 [@solin_sarkka]: if $\bar{y}|\gamma \sim \mathcal{N}(\mathbf{\mu}, \gamma K)$, where $\gamma$ is inverse gamma distributed $\gamma \sim  \textrm{IG}(\nu/2, (\nu-2)/2)$, then  marginally $\bar{y} \sim \textrm{MTV}_n(\mu, K, \nu).$  The function ```generate_data_set``` creates a list of data in the form that the Stan model can read. 
+The model is tested on simulated data generated by the sampling scheme in Lemma 2.2 [@solin_sarkka]: if $\bar{y}|\gamma \sim \mathcal{N}(\mathbf{\mu}, \gamma K)$, where $\gamma$ is inverse gamma distributed $\gamma \sim  \textrm{IG}(\nu/2, (\nu-2)/2)$, then  marginally $\bar{y} \sim \textrm{MTV}_n(\mu, K, \nu).$  The function ```generate_n_series``` returns a list of n series with the given parameter values. 
 
-Robustness of parameter estimates is tested with several different data sets. First we'll let the number of observations run from 2 to 10 and number of time series from 5 to 25 in increments of 5. Then we'll fix the number of observations (5) and let the number of series run from 5 to 100 in increments of 5. 
+Through out the simulations we will fix the parameters to the following values, unless otherwise noted. 
 
-```{r} 
-
-data_set <- list()
-
-# observation 2 -> 10, increments of 1
-for(i in 5*(1:5)){
-for(j in 2:10) {
-data_set[[paste(i,"series",j,"observations")]] <- generate_data_set(kappa=0.1,
-lambda=1, mu=5, intervals=1:j, n_series=i, t.df=7, seed=1)
-}
-}
-
-# 5 observations, series 30 -> 100, increments of 5
-for(i in 5*(6:20)) {
-data_set[[paste(i,"series",5,"observations")]] <- generate_data_set(kappa=0.1,
-lambda=1, mu=5, intervals=1:5, n_series=i, t.df=7, seed=1)
-}
-
-n_series <- 5*1:20
-n_obs <- 2:10
+```{r parameters}
+lambda <- 0.1
+sigma <- 0.1
+mu <- 5
+t.df <- 7
 ```
 
 
-Next we input simulated data to ```hier_concentered.stan```. 
-Sampling for the entire data set took a considerable amount of time on a basic laptop (1,3GHz, 4 cores), close to 11 hours, so the sampling block below is not evaluated. Default settings were used, but in order to decrease the amount of divergent transitions ```adapt_delta``` was set to 0.9. Divergencies were not eliminated altogether and the amount ranged from 0 to 50, averaging at about 7 per sampling. 
+### Single series 
+To get an idea many samples are needed for a reliable inference of a single series we simulate data with varying amounts samples. 
 
-```{r sampling, eval=FALSE}
-hier_model <- stan_model("hierarchical_noncentered.stan")
-fit_list <- list()
-for(i in 1:length(data_set)) {
-fit_list[[names(data_set)[[i]]]] <-
-  sampling(noncentered_hiearchical, data_set[[i]], control=list(adapt_delta=0.9))
-}
+First we generate some single series data with a sample size range 5...100 in increments of 5. 
+
+```{r single_series_data} 
+
+  single_series_set <- lapply(seq(from=5, to=100, by = 5), function(x) {
+    s <- generate_n_series(n = 1, intervals = 1:x, mu=mu, lambda=.5, sigma=sigma)
+    s[["kappa_log"]] <- as.array(log(0.1))
+    s[["mu"]] <- as.array(5)
+    return(s)
+  })
+  names(single_series_set) <- as.character(seq(from=5, to=100, by = 5))
+
+```
+
+Then input these data into stan. 
+
+```{r}
+
+  fixed_par_model <- stan_model("fixed_par_original_hierarchical_noncentered.stan")
+
+  single_series_set_samples <- lapply(single_series_set, function(x) sampling(fixed_par_model, x, chains=2))
+  names(single_series_set_samples) <- as.character(seq(from=5, to=100, by = 5))
+  
+```
+
+Results (mean, 25%, 75% quantiles)
+
+In Figure `r figs("single_series_lambda_0.5",display="num")` below the posterior mean and interquartile ranges are plotted agains length of the series. As expected the estimates converge to the simulation value as sample size increases. 
+
+ADD: single series graphs for other lambda values as well to show that estimates converge faster if lambda small. 
+
+```{r}
+  single_series_lambda_0.5 <- single_series_set_samples %>% samples_df() %>% plot_posteriors(sim_value = .5, par="Lambda ")
+
+```
+
+`r figs(name="single_series_lambda_0.5","Means and interquartile ranges of the posteriors for lambda against length of the series. Estimates converge to the simulation value. ")`
+
+
+### Hierarchical model 
+
+*Two groups ? 
+*Individual estimates
+
+Above we saw that a low sample size for a single series generally means poor parameter estimation. Now we try to assess to what extent a hierarchical extension to this model improves the model's performance.
+
+We simulate dataset with number of series and observations as follows
+
+```{r short_series_data}
+  n_series <- c(1, 2, 3, 5, 10, 20)
+  n_observations <- c(5, 10, 20, 40, 80)
+  
+  # generate data
+  short_series_set <- list()
+    for(i in n_observations) {
+      series <- lapply(n_series, function(x) generate_n_series(n=x, sigma=sigma, mu=mu, lambda=0.1, t.df=t.df, intervals = 1:i, seed = 1, fix_mu = 5, fix_kappa_log = log(0.1)) %>% concatenate_series()) %>% set_names(as.character(n_series))
+      
+      short_series_set[[as.character(i)]] <- series
+  }
+```
+
+
+Stan: Sample
+
+```{r short_series_samples, eval = FALSE}
+
+  sample ----
+  short_series_samples <- list()
+  for(i in n_observations) {
+    samples <- list()
+
+    for(j in n_series) {
+        samples[[as.character(j)]] <- sampling(fixed_par_model, short_series_set[[as.character(i)]][[as.character(j)]], chains=2)
+    }
+
+    short_series_samples[[as.character(i)]] <- samples
+  }
+
+  save(short_series_samples, file="short_series_samples")
+  load(file="short_series_samples")
+    
+  
+```
+
+
+Get results as a data frame and make plots
+
+```{r singe_serires_results}
+  # results list
+  short_series_results <- lapply(n_observations, function(x) samples_df_par2(short_series_samples[[as.character(x)]], par='lambda')) %>% set_names(as.character(n_observations))
+    
+  # plot results
+  short_series_plots <- lapply(as.character(n_observations), function(x) short_series_results[[x]] %>% plot_short_series_posteriors() + labs(title=paste0(x, " observations")))
 ```
 
 
@@ -265,10 +336,6 @@ Measure performance with mean.
 
 
 ```
-
-
-### Precision
-
 
 
 ### Diagnostics & Running time

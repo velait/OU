@@ -70,11 +70,9 @@ fixed_par_original_long_sample <- sampling(fixed_par_model, concatenate_two_seri
 
 #### TODO ####
 
-#### simulate data with one series, show that lambda is recovered better with more data ---
-
-# data
+#### single series,  data: lambda = 0.5 ----
 single_series_set <- lapply(seq(from=5, to=100, by = 5), function(x) {
-  s <- generate_a_series(intervals = 1:x, mu=mu, lambda=lambda, kappa=kappa)
+  s <- generate_n_series(n = 1, intervals = 1:x, mu=mu, lambda=lambda, kappa=kappa)
   s[["kappa_log"]] <- as.array(log(0.1))
   s[["mu"]] <- as.array(5)
   return(s)
@@ -90,24 +88,13 @@ names(single_series_set) <- as.character(seq(from=5, to=100, by = 5))
 
 load(file="single_series_set_samples")
 
-# make data frame for results
-single_series_results <- matrix(NA, length(single_series_set_samples), 4)
-colnames(single_series_results) <- c("length", "lower25", "mode", "upper75")
-
-j <- 1
-for(i in single_series_set_samples) {
-  res <- summary(i)$summary[grep("lambda\\[", rownames(summary(i)$summary)),c("25%", "50%", "75%")]
-  
-  single_series_results[j, c("lower25", "mode", "upper75")] <- res
-  j <- j + 1
-}
-
-single_series_results[, "length"] <- as.numeric(names(single_series_set_samples))
-single_series_results <- single_series_results %>% as.data.frame()
-
+# data frame for results
+single_series_results <- single_series_set_samples %>% samples_df()
                             
 # plot
 p_single_series <- plot_posteriors(single_series_results, sim_value = .5, par="Lambda ")
+
+
 
 
 #### two series ----

@@ -1,4 +1,4 @@
-//Copyright 2017 Aaron Goodman <aaronjg@stanford.edu>. Licensed under the GPLv3 or later.
+
 data{
   int <lower=0> T;               // total number of samples
   int <lower=0> n_series;        // number of series
