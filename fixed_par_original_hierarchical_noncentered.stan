@@ -3,7 +3,7 @@ data{
   int <lower=0> T;               // total number of samples
   int <lower=0> n_series;        // number of series
   int <lower=0> samples_per_series[n_series]; 
-  real <lower=0> observations[T]; // observation concatenated
+  vector<lower=0> [T] observations; // observation concatenated
   vector [T] time;               // observation times concatenated
   
   vector[n_series] kappa_log;
@@ -11,7 +11,7 @@ data{
 }
 transformed data{
   
-  vector[T] observation_vec = to_vector(observations);
+  // vector[T] observation_vec = to_vector(observations);
   vector[T] time_vec = to_vector(time);
   
   int sample_start[n_series];
@@ -48,8 +48,7 @@ transformed parameters{
     
     int n = samples_per_series[i];
     int offset = sample_start[i];
-    vector [n-1] time_diff = segment(time_vec, offset + 1, n - 1) -
-      segment(time_vec,offset,n-1);
+    vector [n-1] time_diff = time_vec[offset+1:offset+n] -time_vec[offset:offset+n-1];
     real cum_squares = 0;
     real last_t = -1;
     real lv;
@@ -82,7 +81,10 @@ model {
     int n = samples_per_series[i];
     int offset = sample_start[i];
     vector[n] sq_lv = square(epsilon[offset:(offset + n - 1)]);
-    vector[n] cum_squares = cumulative_sum(append_row(0,sq_lv[1:n-1]));    
+    vector[n] cum_squares = cumulative_sum(append_row(0,sq_lv[1:n-1]));  
+    
+    // log1p_term = log1p(sq_lv[k] / (student_df + cum_squares[k] - 2));
+    
     for(k in 1:samples_per_series[i]){
       target +=  (lgamma((student_df + k) * 0.5) - lgamma((student_df+ k - 1 )* 0.5));     
       target += -0.5 * (student_df + k) * log1p(sq_lv[k] / (student_df + cum_squares[k] - 2));
