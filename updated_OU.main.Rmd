@@ -42,8 +42,8 @@ subblck <- captioner(prefix="Supplementary Chunk")
 # subfigs <- captioner(prefix="Supplementary Fig.")
 
 set.seed(11235)
-# source("functions.R")
-# source("OU.source.R")
+source("functions.R")
+source("OU.source.R")
 
 #Load data if available. If not, set eval = TRUE in sampling chunk.
 
