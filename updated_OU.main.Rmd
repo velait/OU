@@ -143,8 +143,8 @@ t.df <- 7
 ```
 
 
-
 ### Single series 
+
 To get an idea how many samples are needed for a reliable inference of a single series we test the model with simulated data with different sample sizes. In Figure `r figs("single_series_lambda_0.5",display="num")` below the posterior means and interquartile ranges (IQRs) are plotted agains length of the series. As expected the estimates converge to the simulation value as sample size increases and with very few observation the estimates are inaccurate. Based on this test around 20 samples are needed for a realiable inference with the given parameter values. 
 
 ```{r single_series_plots}
@@ -157,11 +157,6 @@ grid.arrange(single_series_plots[[1]])
 ### Hierarchical model: two long series
 Here we tested the hierarchical version of the model with two long series. The idea is to study if the estimates become more precise given a replicate of the series. It seems that the additional hierarchy level does not make more educated guesses. 
 
-```{r two_series_comparison_plot}
-two_series_comparison_plot
-```
-
-`r figs(name="two_series_comparison_plot","Means and IQRs of the posteriors for lambda against length of the series. Series A and B denote the data used in hierarchical model and single refers to the model used in previous chapter.")`
 
 
 
