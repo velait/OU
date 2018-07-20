@@ -12,16 +12,16 @@ iter = 4000
 fix_kappa_log <- log(0.1)
 fix_mu <- 5
 
-#### Model ####
-# fixed_par_model <- stan_model("fixed_par_original_hierarchical_noncentered.stan")
+#### Stan model ####
+fixed_par_model <- stan_model("fixed_parameter_hierarchical_noncentered.stan")
 
 #### Example plots ####
 
 # lambda = 0.01, 0.1, 1
-oup_example_plot <- sapply(c(0.01, 0.1, 1), function(x) generate_a_series(sigma = sigma, lambda = x, mu = mu, intervals = 1:200, t.df=Inf, seed = 1)[["observations"]]) %>% as_tibble() %>% set_colnames(c("lambda = 0.01", "lambda = 0.1", "lambda = 1")) %>%  mutate(time=1:200) %>% melt(id.vars="time") %>% ggplot(aes(x=time, y=value, color=variable)) + geom_line() + scale_y_continuous(limits = c(4, 7)) +  theme_bw() + labs(x="Time", y="Value", title="mu = 5, sigma = 0.1") + scale_color_manual(values=c('#4daf4a','#377eb8', '#e41a1c')) + theme(legend.title=element_blank())
+oup_example_plot <- sapply(c(0.01, 0.1, 1), function(x) generate_a_series(sigma = sigma, lambda = x, mu = mu, intervals = 1:200, t.df=Inf, seed = 1)[["observations"]]) %>% as_tibble() %>% set_colnames(c("lambda = 0.01", "lambda = 0.1", "lambda = 1")) %>%  mutate(time=1:200) %>% melt(id.vars="time") %>% ggplot(aes(x=time, y=value, color=variable)) + geom_hline(yintercept = 5, linetype="dashed") + geom_line() + scale_y_continuous(limits = c(4, 7)) +  theme_bw() + labs(x="Time", y="Value", title="mu = 5, sigma = 0.1") + scale_color_manual(values=c('#4daf4a','#377eb8', '#e41a1c')) + theme(legend.title=element_blank())
 
 # sigma = 0.01, 0.1, 1
-oup_example_plot2 <- sapply(c(0.05, 0.1, 0.2), function(x) generate_a_series(sigma = x, lambda = lambda, mu = mu, intervals = 1:200, t.df=Inf, seed = 1)[["observations"]]) %>% as_tibble() %>% set_colnames(c("sigma = 0.05", "sigma = 0.1", "sigma = 0.2")) %>%  mutate(time=1:200) %>% melt(id.vars="time") %>% ggplot(aes(x=time, y=value, color=variable)) + geom_line() + theme_bw() + labs(x="Time", y="Value", title="mu = 5, lambda = 0.1") +  scale_color_manual(values=c('#4daf4a','#377eb8', '#e41a1c')) + theme(legend.title=element_blank())
+oup_example_plot2 <- sapply(c(0.05, 0.1, 0.2), function(x) generate_a_series(sigma = x, lambda = lambda, mu = mu, intervals = 1:200, t.df=Inf, seed = 1)[["observations"]]) %>% as_tibble() %>% set_colnames(c("sigma = 0.05", "sigma = 0.1", "sigma = 0.2")) %>%  mutate(time=1:200) %>% melt(id.vars="time") %>% ggplot(aes(x=time, y=value, color=variable)) + geom_hline(yintercept = 5, linetype="dashed") + geom_line() + theme_bw() + labs(x="Time", y="Value", title="mu = 5, lambda = 0.1") +  scale_color_manual(values=c('#4daf4a','#377eb8', '#e41a1c')) + theme(legend.title=element_blank())
 
 #### Single series  ####
 
@@ -48,7 +48,7 @@ load(file="single_series_set_samples")
 ## plots
 
 single_series_plots <- lapply(single_series_set_samples, function(x){
-  x %>% samples_df() %>% plot_posteriors(sim_value = as.numeric(names(single_series_set_samples)), par="Lambda ")
+  x %>% samples_df() %>% plot_posteriors(sim_value = 0.1 , par="Lambda ")
 }) %>% set_names(c(.1, .3, .5, .7))
 
 
@@ -72,7 +72,7 @@ load(file="two_series_set_samples")
 two_series_results <- two_series_set_samples %>% samples_df2()
 
 ## plot
-two_series_plot <- two_series_results %>% plot_hier_posteriors(sim_value = .5)
+two_series_plot <- two_series_results %>% plot_hier_posteriors(sim_value = lambda) + ggtitle(" ")
 
 ## plot comparison 
 two_series_comparison_plot <- ggplot(rbind(single_series_set_samples[["0.1"]] %>% samples_df() %>% mutate(Series="single"), two_series_results), aes(x=Observations, y=mean, group=Series, color=Series)) + 
@@ -149,6 +149,6 @@ running_times$n_series <- factor(running_times$n_series, levels=unique(running_t
 
 # plot
 
-running_times_plot <- running_times %>% ggplot(aes(x=n_series, y=log2((value)/60), color=n_obs)) + geom_point() + labs(y="Minutes", x="Number of series") + guides(color=guide_legend(title="Observations")) + theme_bw()
+running_times_plot <- running_times %>% ggplot(aes(x=as.numeric(as.character(n_series)), y=value/60, color=n_obs)) + geom_point() + labs(y="Minutes", x="Number of series") + guides(color=guide_legend(title="Observations")) + theme_bw()+ geom_line()
 
 #### Diagnostics
