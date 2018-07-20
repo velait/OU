@@ -1,10 +1,10 @@
 ---
 title: "A Hierarchical extension to Ornstein-Uhlenbeck-type Student's t-processes"
 author: |
-  | Ville Laitinen & Leo Lahti 
+  | Ville Laitinen & Leo Lahti
   | University of Turku, Finland
-  | velait@utu.fi
-date: "r Sys.Date()"
+  | <velait@utu.fi>"
+date: "`r Sys.Date()`"
 header-includes:
 
 output:
@@ -149,7 +149,7 @@ t.df <- 7
 
 
 ### Single series 
-To get an idea how many samples are needed for a reliable inference of a single series we test the model with simulated data with different sample sizes. In Figure `r figs("single_series_lambda_0.5",display="num")` below the posterior means and interquartile ranges (IQRs) are plotted agains length of the series. As expected the estimates converge to the simulation value as sample size increases and with very few observation the estimates are inaccurate. Based on this test around 20 samples are needed for a realiable inference. 
+To get an idea how many samples are needed for a reliable inference of a single series we test the model with simulated data with different sample sizes. In Figure `r figs("single_series_lambda_0.5",display="num")` below the posterior means and interquartile ranges (IQRs) are plotted agains length of the series. As expected the estimates converge to the simulation value as sample size increases and with very few observation the estimates are inaccurate. Based on this test around 20 samples are needed for a realiable inference with the given parameter values. 
 
 ```{r single_series_plots}
 grid.arrange(single_series_plots[[1]])
