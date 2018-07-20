@@ -6,8 +6,8 @@ lambda <- 0.1
 mu <- 5
 t.df <- 7
 
-chains = 1
-iter = 10
+chains = 2
+iter = 4000
 
 fix_kappa_log <- log(0.1)
 fix_mu <- 5
@@ -41,11 +41,12 @@ for(i in names(single_series_set)) {
   single_series_set_samples[[i]] <- lapply(single_series_set[[i]], function(x) sampling(fixed_par_model, x, chains=chains, iter=iter)) %>% set_names(as.character(seq(from=5, to=100, by = 5)))
 }
 
+save(single_series_set_samples, file="single_series_set_samples")
 
 ## plots
 
 single_series_plots <- lapply(single_series_set_samples, function(x){
-  x %>% samples_df() %>% plot_posteriors(sim_value = lambda, par="Lambda ")
+  x %>% samples_df() %>% plot_posteriors(sim_value = as.numeric(names(single_series_set_samples)), par="Lambda ")
 }) %>% set_names(c(.1, .3, .5, .7))
 
 
@@ -60,6 +61,8 @@ two_series_set <- lapply(seq(from=5, to=100, by = 5), function(x) {
 ## Samples
 two_series_set_samples <- lapply(two_series_set, function(x) sampling(fixed_par_model, x, chains=chains, iter=iter)) %>% set_names(as.character(seq(from=5, to=100, by = 5)))
 
+save(two_series_set_samples, file="two_series_set_samples")
+
 ## Data frame for results
 two_series_results <- two_series_set_samples %>% samples_df2()
 
@@ -70,7 +73,7 @@ two_series_plot <- two_series_results %>% plot_hier_posteriors(sim_value = .5)
 two_series_comparison_plot <- ggplot(rbind(single_series_set_samples[["0.1"]] %>% samples_df() %>% mutate(Series="single"), two_series_results), aes(x=Observations, y=mean, group=Series, color=Series)) + 
   geom_errorbar(aes(ymin=lower25, ymax=upper75), width=1) +
   geom_line() +
-  geom_point()  + geom_hline(yintercept = .5, linetype="dashed", color="black") + labs(y="Estimate", x="Length", title="lambda = 0.5") + theme_bw() + scale_color_manual(values=c("#f1a340", "#998ec3", "black")) 
+  geom_point()  + geom_hline(yintercept = lambda, linetype="dashed", color="black") + labs(y="Estimate", x="Length") + theme_bw() + scale_color_manual(values=c("#f1a340", "#998ec3", "black")) 
 
 
 #### Many short series ####
