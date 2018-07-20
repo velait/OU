@@ -42,8 +42,8 @@ subblck <- captioner(prefix="Supplementary Chunk")
 # subfigs <- captioner(prefix="Supplementary Fig.")
 
 set.seed(11235)
-# source("functions.R")
-# source("OU.source.R")
+source("functions.R")
+source("OU.source.R")
 
 #Load data if available. If not, set eval = TRUE in sampling chunk.
 
@@ -142,10 +142,6 @@ mu <- 5
 t.df <- 7
 ```
 
-![](example_graph.jpg)
-![](bacteroides_graph.jpg)
-
-`r figs(name="parameter_justification","Simulated time series (above) is qualitatively similar to real data (Lahti L and Vos W. M. 2014) of the genus Bacteroides (below).")`
 
 
 ### Single series 
