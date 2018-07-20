@@ -13,7 +13,7 @@ fix_kappa_log <- log(0.1)
 fix_mu <- 5
 
 #### Model ####
-fixed_par_model <- stan_model("fixed_par_original_hierarchical_noncentered.stan")
+# fixed_par_model <- stan_model("fixed_par_original_hierarchical_noncentered.stan")
 
 #### Example plots ####
 
