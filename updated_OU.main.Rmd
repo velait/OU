@@ -161,9 +161,10 @@ Here we tested the hierarchical version of the model with two long series. The i
 
 
 ### Hierarchical model: many short series
-Here we still increase the number of available series and also vary the amount of observations to assess the effect of larger amounts of replicates. As expected and evident in the previous sections there is improvement in accuracy as series length is increased. However, at least upon visual inspection, additional series seem to make only minor improvements in the model performance. 
 
-```{r single_series_results, fig.width=12}
+Here we increase the number of available series and also vary the amount of observations to assess the effect of larger amounts of replicates. As expected and evident in the previous sections there is improvement in accuracy as series length is increased. However, at least upon visual inspection, additional series seem to make only minor improvements in the model performance. 
+
+```{r single_series_results, fig.width=12, out.height=5, out.width=10}
 print(short_series_plots)
 ```
 
@@ -175,7 +176,8 @@ print(short_series_plots)
 
 ### Diagnostics & Running time
 
-Running times seem to grow linearly as function of sample size. 
+Running times seem to grow linearly as function of sample size (Fig. `r figs("running_times_plot",display="num")`).
+
 ```{r}
 print(running_times_plot)
 ```
