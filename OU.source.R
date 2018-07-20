@@ -35,13 +35,15 @@ names(single_series_set) <- as.character(c(.1, .3, .5, .7))
 
 
 ## samples
-single_series_set_samples <- list()
+# single_series_set_samples <- list()
+# 
+# for(i in names(single_series_set)) {
+#   single_series_set_samples[[i]] <- lapply(single_series_set[[i]], function(x) sampling(fixed_par_model, x, chains=chains, iter=iter)) %>% set_names(as.character(seq(from=5, to=100, by = 5)))
+# }
+# 
+# save(single_series_set_samples, file="single_series_set_samples")
 
-for(i in names(single_series_set)) {
-  single_series_set_samples[[i]] <- lapply(single_series_set[[i]], function(x) sampling(fixed_par_model, x, chains=chains, iter=iter)) %>% set_names(as.character(seq(from=5, to=100, by = 5)))
-}
-
-save(single_series_set_samples, file="single_series_set_samples")
+load(file="single_series_set_samples")
 
 ## plots
 
@@ -59,9 +61,12 @@ two_series_set <- lapply(seq(from=5, to=100, by = 5), function(x) {
 }) %>% set_names(as.character(seq(from=5, to=100, by = 5)))
 
 ## Samples
-two_series_set_samples <- lapply(two_series_set, function(x) sampling(fixed_par_model, x, chains=chains, iter=iter)) %>% set_names(as.character(seq(from=5, to=100, by = 5)))
+# two_series_set_samples <- lapply(two_series_set, function(x) sampling(fixed_par_model, x, chains=chains, iter=iter)) %>% set_names(as.character(seq(from=5, to=100, by = 5)))
+# 
+# save(two_series_set_samples, file="two_series_set_samples")
 
-save(two_series_set_samples, file="two_series_set_samples")
+load(file="two_series_set_samples")
+ 
 
 ## Data frame for results
 two_series_results <- two_series_set_samples %>% samples_df2()
@@ -144,6 +149,6 @@ running_times$n_series <- factor(running_times$n_series, levels=unique(running_t
 
 # plot
 
-running_times_plot <- running_times %>% ggplot(aes(x=n_series, y=(value)/60, color=n_obs)) + geom_point() + labs(y="Minutes", x="Number of series") + guides(color=guide_legend(title="Observations")) + theme_bw()
+running_times_plot <- running_times %>% ggplot(aes(x=n_series, y=log2((value)/60), color=n_obs)) + geom_point() + labs(y="Minutes", x="Number of series") + guides(color=guide_legend(title="Observations")) + theme_bw()
 
 #### Diagnostics
