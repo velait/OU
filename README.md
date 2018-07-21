@@ -1,13 +1,9 @@
-# Hierarchical implementation of the Ornstein-Uhlenbeck Process in RStan
+## Hierarchical Ornstein-Uhlenbeck Process in RStan
 
-This repository contains the material for the [Helsinki StanCon 2018](http://mc-stan.org/events/stancon2018Helsinki/) presentation by Ville Laitinen & Leo Lahti, [Open Research Labs](http://openresearchlabs.github.io), University of Turku, Finland.
-
-In brief, the work provides an implementation and initial analysis of a hierarchical Ornstein-Uhlenbeck model by extending the earlier work by [Aaron Goodman, 2018](https://github.com/stan-dev/stancon_talks/tree/master/2018/Contributed-Talks/05_goodman).
-
-For details, see the reproducible [markdown document](https://github.com/velait/OU/blob/master/hierarchical_OU.main.html).
+This repository contains material for the [Helsinki StanCon 2018](http://mc-stan.org/events/stancon2018Helsinki/) presentation by Ville Laitinen & Leo Lahti, [Open Research Labs](http://openresearchlabs.github.io), University of Turku, Finland. The work provides an implementation and initial analysis of a hierarchical Ornstein-Uhlenbeck model by extending the earlier work by [Aaron Goodman, 2018](https://github.com/stan-dev/stancon_talks/tree/master/2018/Contributed-Talks/05_goodman). For further details, see the reproducible [markdown document](https://github.com/velait/OU/blob/master/hierarchical_OU.main.md).
 
 
-## Replicating the analysis
+### Replicating the analysis
 
 The material is available under the CC-4.0 license.
 
@@ -23,7 +19,7 @@ render("hierarchical_OU.main.Rmd")
 ```
 
 
-## Citing the work
+### Citing the work
 
 Kindly cite the work as follows: Ville Laitinen and Leo Lahti. A
 Hierarchical extension to Ornstein-Uhlenbeck-type Student’s
