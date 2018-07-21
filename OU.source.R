@@ -202,4 +202,4 @@ running_times_plot <- running_times %>% ggplot(aes(x = as.numeric(as.character(n
                                                                                                        x = "Number of series") + guides(color = guide_legend(title = "Observations")) + 
   theme_bw() + geom_line()
 
-#### Diagnostics
+#### Diagnostics ####
