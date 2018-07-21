@@ -53,7 +53,7 @@ source("OU.source.R")
 
 ## Introduction
 
-This work investigates probabilistic time series models that are motivated by applications in statistical ecology. In particular, we investigate variants of the mean-reverting and stochastic Ornstein-Uhlenbeck (OU) process. We provide a hierarchical extension for joint analysis of multiple (short) time series, validate the model, and analyze its performance with simulations. The works extends the recent Stan implementation of the OU process [@Goodman2018], where parameter estimates of a Student-t type OU process are obtained based on a single (long) time series. We have added a level of hierarchy, which allows joint inference of the model parameters across multiple time series.
+This work investigates probabilistic time series models that are motivated by applications in statistical ecology. In particular, we investigate variants of the mean-reverting and stochastic Ornstein-Uhlenbeck (OU) process. We provide a hierarchical extension for joint analysis of multiple (short) time series, validate the model, and analyze its performance with simulations. The work extends the recent Stan implementation of the OU process [@Goodman2018], where parameter estimates of a Student-t type OU process are obtained based on a single (long) time series. We have added a level of hierarchy, which allows joint inference of the model parameters across multiple time series.
 
 Motivation for this work comes from the analysis of human gut microbiome dynamics. It has been reported that on average the abundance of many gut bacteria remains relatively stable over long time periods [@david_host_2014]. However, on a shorter (daily) time scale these abundances can exhibit considerable fluctuations. A number of cross-sectional studies of the human microbiome have characterized the diversity and variation of the gut microbiome between individuals [e.g. @hmp_huttenhower; @Qin2009]. The temporal dynamics of microbial organisms within individuals is, however, less well understood [@faust_metagenomics_2015]. Given the complex and highly individual nature of the gut ecosystem, exact dynamical models fail to capture the rich stochastic dynamics that these systems have been reported to exhibit.
 
@@ -81,7 +81,7 @@ grid.arrange(oup_example_plot +
 
 ## Ornstein-Uhlenbeck process
 
-The Ornstein-Uhlenbeck process, also known as the Langevin equation in physics and Vasicek model in finance, is a stochastic process with a wide range of applications [@Iacus_SDE]. It has been used to model systems with a steady state that recover from perturbations by returning to the long term mean (Fig. `r figs("oup_example_plot",display="num")`). 
+The Ornstein-Uhlenbeck process, also known as the Langevin equation in physics and Vasicek model in finance, is a stochastic process with a wide range of applications [@Iacus_SDE]. It has been used to model systems with a steady state that recover from perturbations by returning to the long term mean (Fig. `r figs("oup_example_plots",display="num")`). 
 
 The OU process is defined by the stochastic differential equation $$dX_t = \lambda (\mu - X_t)dt + \sigma dZ_t,$$
 where $X_t$ is the state of the system at time t and $Z$ a stochastic process. Unlike with an ordinary differential equation, the solutions of the stochastic counterpart are nowhere differentiable and non-unique as they are different for different realizations of the noise term. Averaging over these solutions recovers the deterministic solution.
@@ -121,11 +121,13 @@ $$dX_{j,t} = \lambda_j (\mu_j - X_{j,t})dt + \sigma_jdZ_t,$$
 for all $j \in \{1, \ldots, n_i\}$.
 
 
-For a general and simplified treatment of the OU process we assume our observations to be directly generated from the OU process and use uniform time intervals. It is relatively straightforward to modify the implementation to incorporate unequal time intervals. Additional models for observation noise provide interesting opportunities for further extensions. In ecological studies, that motivate our work, the observation noise is often modeled with a Gaussian or Poisson distribution, where the rate parameter is obtained from the OU process which is transformed into via  exponentiation. This so called stochastic Gompertz model is frequently used in ecological time-series analysis [@dennis_2014]. For OU process implementation of the Gompertz model in the context of a single time series, see [@Goodman2018].
+For a general and simplified treatment of the OU process we assume our observations to be directly generated from the OU process and use uniform time intervals. In would be relatively straightforward to modify the existing implementation to incorporate unequal time intervals. Additional models for observation noise provide interesting opportunities for further extensions. In ecological studies, that motivate our work, the observation noise is often modeled with a Gaussian or Poisson distribution, where the rate parameter is obtained from the OU process which is transformed into via  exponentiation. This so called stochastic Gompertz model is frequently used in ecological time-series analysis [@dennis_2014]. For OU process implementation of the Gompertz model in the context of a single time series, see [@Goodman2018].
 
-We have implemented the [hierarchical extension with RStan](https://github.com/velait/OU/blob/master/fixed_parameter_hierarchical_noncentered.stan). In summary, the idea of the Stan code is as follows. After declaring the data and model parameters, error terms $\epsilon_i$ and latent values $X_i$ are related in the transformed data block. In the model block parameters and conditional densities for the error terms are incremented to the log density and the observations $Y_{ji}$ are sampled from a normal distribution with $X_i$ as the mean and small variance. Adding a level of hierarchy to the existing implementation is relatively straightforward as the model likelihood in the extended version equals the product of transition densities of individual series $$\prod_{i=1}^N\prod_{j=1}^{n_i} p(\epsilon_{i,j}| \epsilon_{i,1},\ldots, \epsilon_{i,j-1})$$ 
+We have implemented the [hierarchical extension with RStan](https://github.com/velait/OU/blob/master/fixed_parameter_hierarchical_noncentered.stan). In summary, the idea of the Stan code is as follows. After declaring the data and model parameters, error terms $\epsilon_i$ and latent values $X_i$ are related in the transformed data block. In the model block parameters and conditional densities for the error terms are incremented to the log density and the observations $Y_{ji}$ are sampled from a normal distribution with $X_i$ as the mean and small variance. Adding a level of hierarchy to the existing implementation can be obtained by modifying the model likelihood in the extended version so that it equals the product of transition densities of individual series:
 
-Here, we have used a non-centered parameterization with error terms $\epsilon_i$. In our initial experiments the centered parameterization resulted in less accurate results and more divergent transitions. This is in agreement with [@stan_manual, p.145] where it is mentioned that hierarchical models tend to perform better with non-centered parameterizations, especially when the sample size is limited.
+$$\prod_{i=1}^N\prod_{j=1}^{n_i} p(\epsilon_{i,j}| \epsilon_{i,1},\ldots, \epsilon_{i,j-1})$$ 
+
+We have used a non-centered parameterization with error terms $\epsilon_i$. In our initial experiments the centered parameterization resulted in less accurate results and more divergent transitions. This is in agreement with [@stan_manual, p.145] where it is mentioned that hierarchical models tend to perform better with non-centered parameterizations, especially when the sample size is limited.
 
 
 ## Model validation
@@ -158,7 +160,7 @@ print(p)
 
 As the first validation of the hierarchical implementation, we demonstrate that a model with two simulated time series converges to their known long-term mean values (Fig. `r figs("add_new_plot_here",display="num")`). This indicates that the hierarchical model works as expected regarding the inference of the mean reversion parameter $\lambda$. We also performed initial experiments in order to compare convergence rates between the individual versus joint (hierarchical) modeling of the time series but observed no significant differences in the convergence rate and accuracy of $\lambda$ with the current parameter ranges (data not shown).
 
-```{r two_series_plot, fig.width=5, fig.height=5, out.width="300px"}
+```{r two_series_plot, fig.width=4, fig.height=3, out.width="300px"}
 print(two_series_plot)
 ```
 
@@ -178,29 +180,40 @@ print(short_series_plots)
 
 ## Discussion
 
-The main objective of this work has been to provide a hierarchical version of the Ornstein-Uhlenbeck driven Student-t process in Stan, motivated by contemporary applications in statistical ecology. For instance, a recently published HITChip Atlas data set [@TippingElements], consists of microbiome profiling from stool samples with 2-5 time points per subject. Joint analysis of the multiple time series is expected to provide information on the typical, universal abundance ranges and resilience of the different microbial organisms in the human gut ecosystem that are shared across the population. Although a more comprehensive analysis of the possible parameter ranges will be valuable, our results indicate that 20 time points or more may be needed for reliable inference with the current implementation. Aggregating information across multiple time series did not improve posterior inference as expected but solving this issue might allow reliable inference also based on shorter time series.
+The main objective of this work has been to provide a hierarchical version of the Ornstein-Uhlenbeck driven Student-t process in Stan, motivated by contemporary applications in statistical ecology. For instance, a recently published HITChip Atlas data set [@TippingElements], consists of microbiome profiling from stool samples with 2-5 time points per subject. Joint analysis of the multiple time series is expected to provide information on the typical, universal abundance ranges and resilience of the different microbial organisms in the human gut ecosystem that are shared across the population. Moreover, hierarchical models could be used to systematically compare the effects of different phenotypic changes on microbial dynamics. Although a more comprehensive analysis of the possible parameter ranges will be valuable, our results indicate that 20 time points or more may be needed for reliable inference with the current implementation. Aggregating information across multiple time series did not improve posterior inference as expected but solving this issue might allow reliable inference also based on shorter time series.
 
-Whereas we have in this work focused on the inference of the mean reversion parameter $\lambda$, the expected benefits of a hierarchical model will become more clearly visible with the full and more complex model where all parameters are inferred simultaneously. One of the potential advantages of the hierarchical model is that joint analysis of multiple time series can allow more rapid convergence of the parameter estimates with low sample sizes when the parameters follow the same prior distribution. We did not, however, observe significant differences in the convergence rates of $\lambda$, compared to separate modeling of each individual time series. 
+Our current implementation operates on a fixed prior distribution, and allows partial pooling of multiple time series. Partial pooling can provide regularization for parameter inference, which can be particularly valuable when the sample sizes and time series lengths are limited, as in human microbiome studies. In that context partial pooling model is suited for instance to simultaneously analyse the dynamics of multiple microbial species. In the human gut, hundreds of distinct bacterial species are frequently encountered, and many of them exhibit mean-reversing variation that can be modeled with the OU process. In this context, each microbial species is assumed to have its own dynamical parameters, and comparing the mean ($\mu$), mean reversion rate ($\lambda$), and stochastic fluctuations ($\sigma$) between species can provide useful information on the overall microbial ecosystem dynamics. Relaxing the assumption of fixed priors by hyperparameter inference would be a relevant further extension. At the same time, our implementation is a step towards a model where the hierarchy concerns sets of time series where the model parameters are shared within each set. This could be used to assess differences between relevant phenotype groups such as healthy and compromised study subjects; there all model parameters are potential interest, and can be interpreted as the mean microbial abundance ($\mu$), resilience of a species ($\lambda$), and volatility of a species abundance ($\sigma$). Changes in these parameters under varying conditions are of regular interest in microbial ecology. In the present work, we have been working with the first type of model, where each set includes only a single time series. Our initial experiments with the model with multiple time series per set will provide a useful extension but have currently unresolved convergence issues. 
+
+Alternatives for the OU process model, and its Student t variant would include for instance hidden mixture models, which could characterize wider variation in the data than is allowed by the standard Gaussian models. The specific advantage of the OU process is the focus on the mean reversion, which is frequently observed in ecological applications, for instance. Whereas we have in this work focused on the inference of the mean reversion parameter $\lambda$, the expected benefits of a hierarchical model will become more clearly visible with the full and more complex model where all parameters are inferred simultaneously. One of the potential advantages of the hierarchical model is that joint analysis of multiple time series can allow more rapid convergence of the parameter estimates with low sample sizes when the parameters follow the same prior distribution. We did not, however, observe significant differences in the convergence rates of $\lambda$, compared to separate modeling of each individual time series. Moreover, future work will benefit from more thorough analysis of modeling details such as the choices for priors and code optimization.
 
 In summary, we have implemented a hierarchical extension of the OU process model and demonstrated that it can successfully infer known mean reversion parameters in simulated data sets. However, the hierarchical implementation still suffers from convergence problems with the stochastic $\sigma$ parameter, which forms currently a severe limitation for practical application. The tests executed here provide a preliminary results of the model capabilities. For a complete picture an extensive probing of different parameter ranges and (hyper)priors should be undertaken. Alternative parameterizations should be tested to see if some perform better with different sample sizes. This would allow the analysis of time series with missing values and eliminate the need for interpolation and forcing even observation times, techniques that have traditionally been used in these situations.  
 
-## Supplementary
+## Supplementary material
 
-The following example displays how to simulate two OU process time series and sample form the posterior of the hierarchical model.
+The full reproducible source material of this report is available via [Github](http://github.com/velait/OU). The following minimal example demonstrates how to simulate two OU process time series and sample form the posterior of the hierarchical model based on the functions available via the Github repository.
+
 
 ```{r example, echo=TRUE}
-# simulate two time series and combine to make a set suitable for the stan model
-example_data <- generate_n_series(n=2, sigma=0.1, lambda=0.1, mu=5, intervals = 1:50, t.df = Inf, fix_mu = 5, fix_kappa_log = log(0.1), seed = 1) %>% concatenate_series()
+# Load libraries
+require(rstan)
+require(shinystan)
 
-# stan model
+# Simulate two time series and combine to make a set suitable for the stan model
+example_data <- generate_n_series(n=2, sigma=0.1, lambda=0.1, mu=5,
+                                  intervals = 1:50, t.df = Inf,
+				  fix_mu = 5,
+				  fix_kappa_log = log(0.1),
+				  seed = 1) %>%
+		 concatenate_series()
+
+# Stan model
 # fixed_par_model <- stan_model("fixed_parameter_hierarchical_noncentered.stan")
 
-# sample
+# Draw samples
 example_samples <- sampling(fixed_par_model, example_data, chains=2)
 
-# launch shiny stan to view results
+# Launch shiny stan to view results
 # launch_shinystan(example_samples)
-
 ```
 
 
