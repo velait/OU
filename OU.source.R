@@ -76,7 +76,7 @@ single_series_plots <- lapply(single_series_set_samples,
 
 
 
-#### Two series ####
+#### Two series, same lambda ####
 
 ## Data
 two_series_set <- lapply(seq(from = 5, to = 100, by = 5), 
@@ -102,7 +102,8 @@ two_series_results <- two_series_set_samples %>% samples_df2()
 
 ## plot
 two_series_plot <- two_series_results %>% plot_hier_posteriors(sim_value = lambda) + 
-  ggtitle(" ")
+  ggtitle(" ") +
+  labs(y = "Posterior estimate", x="Time points (n)")
 
 ## plot comparison
 two_series_comparison_plot <- ggplot(rbind(single_series_set_samples[["0.1"]] %>% 
@@ -110,9 +111,67 @@ two_series_comparison_plot <- ggplot(rbind(single_series_set_samples[["0.1"]] %>
                                      aes(x = Observations, y = mean, group = Series, color = Series)) + 
   geom_errorbar(aes(ymin = lower25, ymax = upper75), 
                 width = 1) + geom_line() + geom_point() + geom_hline(yintercept = lambda, 
-                                                                     linetype = "dashed", color = "black") + labs(y = "Estimate", 
-                                                                                                                  x = "Length") + theme_bw() + scale_color_manual(values = c("#f1a340", 
-                                                                                                                                                                             "#998ec3", "black"))
+                                                                     linetype = "dashed", color = "black") + labs(y = "Posterior mean", 
+                                                                                                                  x = "Time points (n)") + theme_bw() + scale_color_manual(values = c("#f1a340", 
+                                                                                                                                                                             "#998ec3", "black")) + guides(color=guide_legend(title="Series"))
+
+
+#### Two series, different lambdas ####
+
+# lambda = 0.3, 0.7
+two_diff_series_set <- lapply(seq(from=5, to=100, by = 5), function(x) {
+  
+  s1 <- generate_n_series(n=1, intervals = 1:x, mu=mu, lambda=.3, sigma=sigma, seed=1)
+  s1[["kappa_log"]] <- as.array(log(0.1))
+  s1[["mu"]] <- as.array(5)
+  
+  s2 <- generate_n_series(n=1, intervals = 1:x, mu=mu, lambda=.7, sigma=sigma, seed=2)
+  s2[["kappa_log"]] <- as.array(log(0.1))
+  s2[["mu"]] <- as.array(5)
+  
+  return(concatenate_series(list(s1, s2)))
+})
+
+names(two_diff_series_set) <- as.character(seq(from=5, to=100, by = 5))
+
+
+
+
+# stan samples
+# two_diff_series_set_samples <- lapply(two_diff_series_set, function(x) sampling(fixed_par_model, x, chains=chains, iter=iter))
+# names(two_diff_series_set_samples) <- as.character(seq(from=5, to=100, by = 5))
+
+# save
+# save(two_diff_series_set_samples, file="two_diff_series_set_samples")
+load(file="two_diff_series_set_samples")
+
+# make data frame for results
+two_diff_series_results <- matrix(NA, 2*length(two_diff_series_set_samples), 5)
+colnames(two_diff_series_results) <- c("group", "length", "lower25", "mode", "upper75")
+
+j <- 1
+for(i in two_diff_series_set_samples) {
+  res <- summary(i)$summary[grep("lambda\\[", rownames(summary(i)$summary)),c("25%", "50%", "75%")]
+  
+  two_diff_series_results[c(j, j+1), c("lower25", "mode", "upper75")] <- res
+  j <- j + 2
+}
+
+
+two_diff_series_results[, "length"] <- rep(as.numeric(names(two_diff_series_set_samples)), each=2)
+two_diff_series_results <- two_diff_series_results %>% as.data.frame()
+two_diff_series_results[, "group"] <- rep(c("A","B"), length(two_diff_series_set_samples))
+
+
+# plot
+two_diff_series_plot <- ggplot(two_diff_series_results, aes(x=length, y=mode, group=group, color=group)) + 
+  geom_errorbar(aes(ymin=lower25, ymax=upper75), width=1) +
+  geom_line() +
+  geom_point()  +
+  geom_hline(yintercept = c(.3), linetype="dashed", color="#f1a340") + 
+  geom_hline(yintercept = c(.7), linetype="dashed", color="#998ec3") + 
+  labs(y="Posterior mean", x="Time points (n)") + theme_bw() + scale_color_manual(values=c("#f1a340", "#998ec3")) + guides(color=guide_legend(title="Series"))
+
 
 
 #### Many short series ####

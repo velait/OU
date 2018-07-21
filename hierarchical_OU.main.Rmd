@@ -36,6 +36,7 @@ library(knitr)
 library(gridExtra)
 library(captioner)
 library(bookdown)
+library(latex2exp)
 
 theme_set(theme_bw(40))
 set.seed(11235)
@@ -47,7 +48,7 @@ subblck <- captioner(prefix="Supplementary Chunk")
 # subfigs <- captioner(prefix="Supplementary Fig.")
 
 source("functions.R")
-source("OU.source.R")
+# source("OU.source.R")
 
 ```
 
@@ -158,13 +159,14 @@ print(p)
 
 ### Hierarchical extension with multiple time series 
 
-As the first validation of the hierarchical implementation, we demonstrate that a model with two simulated time series converges to their known long-term mean values (Fig. `r figs("add_new_plot_here",display="num")`). This indicates that the hierarchical model works as expected regarding the inference of the mean reversion parameter $\lambda$. We also performed initial experiments in order to compare convergence rates between the individual versus joint (hierarchical) modeling of the time series but observed no significant differences in the convergence rate and accuracy of $\lambda$ with the current parameter ranges (data not shown).
+As the first validation of the hierarchical implementation, we demonstrate that a model with two simulated time series converges to their known long-term mean values (Fig. `r figs("two_series_plot",display="num")`). This indicates that the hierarchical model works as expected regarding the inference of the mean reversion parameter $\lambda$. We also performed initial experiments in order to compare convergence rates between the individual versus joint (hierarchical) modeling of the time series but observed no significant differences in the convergence rate and accuracy of $\lambda$ with the current parameter ranges (data not shown).
 
-```{r two_series_plot, fig.width=4, fig.height=3, out.width="300px"}
-print(two_series_plot)
+```{r two_series_plot, fig.width = 12}
+# grid.arrange(two_series_plot, two_diff_series_plot, ncol = 2)
+plot_grid(two_series_plot, two_diff_series_plot, labels = c("A", "B"))
 ```
 
-`r figs(name="two_series_plot","The simulated time series converge to their (known) long-term mean values in the hierarchical model as expected.")`
+`r figs(name="two_series_plot","The simulated time series converge to their (known) long-term mean values in the hierarchical model as expected. Parameter values **A** $\\lambda = 0.1$, **B:** $\\lambda_A = 0.3$, $\\lambda_B = 0.7$")`
 
 
 As a second test, we increased the number of time series and varied the amount of observations to assess how the number of time series affects the inference in the hierarchical model. As expected and evident in the previous sections there is improvement in accuracy as series length is increased. However, our current results indicate that additional series seem to make only minor improvements in the model performance (Fig. `r figs("single_series_results",display="num")`). This is unexpected since, theoretically, both time series length and numbers should provide equally valuable extra information for the joint modeling, and hence result in improved posterior inference. This hints at shortcomings in the hierarchical implementation. 
