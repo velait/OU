@@ -123,7 +123,7 @@ generate_a_series <- function(kappa=NULL, sigma=NULL, lambda, mu, intervals, t.d
   if(!is.null(kappa)) {
     x <- kappa * exp(-lambda*dt)
   } else {
-    x <- (sigma^2)/lambda * exp(-lambda*dt)
+    x <- (sigma^2)/(lambda) * exp(-lambda*dt)
   }
   
   
