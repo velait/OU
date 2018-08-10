@@ -9,7 +9,7 @@ theme_set(theme_bw(20))
 compare_n_series <- 20
 chains <- 3
 iter <- 2e3
-intervals <- 1:20
+intervals <- 1:30
 
 mu_val <- rep(5, compare_n_series)
 sigma_val <- rep(0.2, compare_n_series)
@@ -52,7 +52,8 @@ partial_estimate <- diff_compare_summary[["partially_pooled_samples"]] %>%
 			 model="Partially pooled")
 
 m <- max(c(lambda_val, partial_estimate$mode))
-plot(lambda_val, partial_estimate$mode, main = par, xlim = c(0, m), ylim = c(0,m))
+plot(lambda_val, partial_estimate$mode, main = paste(par, "; r=", round(cor(lambda_val, partial_estimate$mode), 2)), xlim = c(0, m), ylim = c(0,m))
+
 abline(0,1, lty = 2)
 
 

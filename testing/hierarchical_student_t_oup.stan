@@ -88,7 +88,7 @@ model {
   // student_df ~ normal(0, 100);
   
   //hyper priors
-  lambda_alpha ~ normal(2, 1);
+  lambda_alpha ~ normal(3, 1);
   lambda_beta ~ normal(1, 2);
   
   mu_mu ~ normal(5, 5);
